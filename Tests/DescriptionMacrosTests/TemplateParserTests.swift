@@ -1,4 +1,4 @@
-@testable import DescribableMacros
+@testable import DescriptionMacros
 import Testing
 
 @Suite("TemplateParser")

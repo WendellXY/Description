@@ -34,7 +34,7 @@ import Foundation
 public macro Describable(
     _ description: String? = nil,
     error: String? = nil
-) = #externalMacro(module: "DescribableMacros", type: "DescribableMacro")
+) = #externalMacro(module: "DescriptionMacros", type: "DescribableMacro")
 
 /// Configures how a single enum case is described by ``Describable(_:error:)``.
 ///
@@ -60,4 +60,4 @@ public macro Describable(
 public macro Description(
     _ description: String? = nil,
     error: String? = nil
-) = #externalMacro(module: "DescribableMacros", type: "DescriptionMacro")
+) = #externalMacro(module: "DescriptionMacros", type: "DescriptionMacro")
