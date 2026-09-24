@@ -1,0 +1,63 @@
+import Foundation
+
+/// Synthesizes a `CustomStringConvertible` conformance for an enum, struct,
+/// class, or actor.
+///
+/// Enum cases are described by their case name unless a case is annotated
+/// with ``Description(_:error:)``. Structs, classes, and actors require a
+/// template whose `{name}` placeholders refer to instance properties declared
+/// on the type:
+///
+/// ```swift
+/// @Describable("User(id: {id}, name: {name})")
+/// struct User {
+///     let id: Int
+///     let name: String
+/// }
+/// ```
+///
+/// When the annotated declaration lists `Error` in its inheritance clause,
+/// the macro additionally synthesizes `LocalizedError`. `errorDescription`
+/// uses the `error:` template when one is provided and falls back to
+/// `description` otherwise.
+///
+/// - Parameters:
+///   - description: A template for `description`. Required for structs,
+///     classes, and actors; not accepted for enums.
+///   - error: A template for `errorDescription`. Only available for types that
+///     explicitly conform to `Error`.
+@attached(
+    extension,
+    conformances: CustomStringConvertible, LocalizedError,
+    names: named(description), named(errorDescription)
+)
+public macro Describable(
+    _ description: String? = nil,
+    error: String? = nil
+) = #externalMacro(module: "DescribableMacros", type: "DescribableMacro")
+
+/// Configures how a single enum case is described by ``Describable(_:error:)``.
+///
+/// Placeholders refer to the case's associated values, either by label
+/// (`{code}`) or by position (`{0}`). Use `{{` and `}}` for literal braces.
+///
+/// ```swift
+/// @Describable
+/// enum RequestState {
+///     case idle
+///
+///     @Description("Loading {url}")
+///     case loading(url: URL)
+/// }
+/// ```
+///
+/// - Parameters:
+///   - description: A template for the case's `description`. Defaults to the
+///     case name.
+///   - error: A template for the case's `errorDescription`. Only available
+///     when the enclosing enum explicitly conforms to `Error`.
+@attached(peer)
+public macro Description(
+    _ description: String? = nil,
+    error: String? = nil
+) = #externalMacro(module: "DescribableMacros", type: "DescriptionMacro")
