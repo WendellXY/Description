@@ -31,5 +31,6 @@ let package = Package(
                 .product(name: "SwiftSyntaxMacrosGenericTestSupport", package: "swift-syntax"),
             ]
         ),
+        .testTarget(name: "DescriptionTests", dependencies: ["Description"]),
     ]
 )

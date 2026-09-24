@@ -1,0 +1,65 @@
+/// A template whose placeholders have been resolved to Swift expressions.
+struct ResolvedTemplate: Equatable {
+    enum Segment: Equatable {
+        /// Literal source text, escape sequences included.
+        case literal(String)
+        /// An expression to interpolate, e.g. `resource` or `self.name`.
+        case interpolation(String)
+    }
+
+    let segments: [Segment]
+    /// The `#` delimiter the generated literal must use so that escape
+    /// sequences copied from the template keep their meaning.
+    let rawDelimiter: String
+
+    /// A template consisting of a single piece of literal text that needs no
+    /// escaping, such as an enum case name.
+    static func plain(_ text: String) -> ResolvedTemplate {
+        ResolvedTemplate(segments: [.literal(text)], rawDelimiter: "")
+    }
+
+    /// The template as a Swift string literal, e.g. `"Loading \(resource)"`.
+    var stringLiteral: String {
+        let body = segments.map { segment in
+            switch segment {
+            case let .literal(text): text
+            case let .interpolation(expression): "\\\(rawDelimiter)(\(expression))"
+            }
+        }
+        return "\(rawDelimiter)\"\(body.joined())\"\(rawDelimiter)"
+    }
+}
+
+/// An enum associated value that templates can refer to.
+struct AssociatedValue: Equatable {
+    /// The zero-based position within the case's associated values.
+    let index: Int
+    /// The label (or internal name) of the value, if it has one.
+    let label: String?
+
+    /// The name the generated `case let` pattern binds the value to.
+    var bindingName: String {
+        label.map(SwiftIdentifier.escaped) ?? "_\(index)"
+    }
+
+    /// How the value is spelled in diagnostics.
+    var placeholderSpelling: String {
+        label.map { "{\($0)}" } ?? "{\(index)}"
+    }
+}
+
+enum SwiftIdentifier {
+    /// Keywords that must be wrapped in backticks to be used as a variable name.
+    private static let reservedWords: Set<String> = [
+        "associatedtype", "class", "deinit", "enum", "extension", "fileprivate", "func", "import", "init",
+        "inout", "internal", "let", "open", "operator", "private", "precedencegroup", "protocol", "public",
+        "rethrows", "static", "struct", "subscript", "typealias", "var", "break", "case", "catch", "continue",
+        "default", "defer", "do", "else", "fallthrough", "for", "guard", "if", "in", "repeat", "return",
+        "throw", "switch", "where", "while", "Any", "as", "await", "false", "is", "nil", "self", "Self",
+        "super", "throws", "true", "try",
+    ]
+
+    static func escaped(_ name: String) -> String {
+        reservedWords.contains(name) ? "`\(name)`" : name
+    }
+}
