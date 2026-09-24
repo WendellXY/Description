@@ -16,6 +16,11 @@ enum DeclarationKind: String, Sendable {
         default: return nil
         }
     }
+
+    /// The indefinite article used before the kind in diagnostics.
+    var article: String {
+        self == .enum || self == .actor ? "an" : "a"
+    }
 }
 
 /// Syntactic facts about the annotated declaration that every kind needs.

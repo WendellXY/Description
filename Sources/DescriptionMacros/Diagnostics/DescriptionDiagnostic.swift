@@ -11,6 +11,9 @@ enum DescriptionDiagnostic: DiagnosticMessage {
     case templateSyntax(TemplateSyntaxError.Kind)
     case unknownField(name: String, available: [String], owner: String)
     case positionalFieldOutOfRange(index: Int, owner: String, count: Int)
+    case positionalFieldOnNominal(index: Int, owner: String)
+    case staticField(name: String)
+    case missingTemplate(DeclarationKind)
     case templateOnEnum
     case duplicateConfiguration
     case emptyDescriptionAttribute
@@ -42,6 +45,12 @@ enum DescriptionDiagnostic: DiagnosticMessage {
                 : "unknown description field '\(name)'; available fields: \(available.joined(separator: ", "))"
         case let .positionalFieldOutOfRange(index, owner, count):
             "description field '{\(index)}' does not exist; \(owner) has \(count) associated \(count == 1 ? "value" : "values")"
+        case let .positionalFieldOnNominal(index, owner):
+            "positional description field '{\(index)}' is only available for enum associated values; refer to the properties of \(owner) by name"
+        case let .staticField(name):
+            "'{\(name)}' refers to a static property; only instance properties can be used in a description"
+        case let .missingTemplate(kind):
+            "@Describable requires a description template when applied to \(kind.article) \(kind.rawValue)"
         case .templateOnEnum:
             "@Describable does not accept templates when applied to an enum; annotate individual cases with @Description instead"
         case .duplicateConfiguration:
@@ -68,6 +77,9 @@ enum DescriptionDiagnostic: DiagnosticMessage {
         case .templateSyntax: "templateSyntax"
         case .unknownField: "unknownField"
         case .positionalFieldOutOfRange: "positionalFieldOutOfRange"
+        case .positionalFieldOnNominal: "positionalFieldOnNominal"
+        case .staticField: "staticField"
+        case .missingTemplate: "missingTemplate"
         case .templateOnEnum: "templateOnEnum"
         case .duplicateConfiguration: "duplicateConfiguration"
         case .emptyDescriptionAttribute: "emptyDescriptionAttribute"

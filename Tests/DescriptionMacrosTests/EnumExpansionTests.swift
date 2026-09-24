@@ -201,6 +201,32 @@ struct EnumExpansionTests {
         )
     }
 
+    @Test func optionalAssociatedValuesUseStringDescribing() {
+        assertExpansion(
+            """
+            @Describable
+            enum Lookup {
+                @Description("found {0}")
+                case found(String?)
+            }
+            """,
+            expandedSource: """
+            enum Lookup {
+                case found(String?)
+            }
+
+            extension Lookup: CustomStringConvertible {
+                var description: String {
+                    switch self {
+                    case let .found(_0):
+                        return "found \\(String(describing: _0))"
+                    }
+                }
+            }
+            """
+        )
+    }
+
     @Test func keywordLabelsAndCaseNamesAreEscaped() {
         assertExpansion(
             """

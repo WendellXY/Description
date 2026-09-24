@@ -45,7 +45,7 @@ struct EnumCaseModel {
         self.associatedValues = (element.parameterClause?.parameters ?? []).enumerated().map { index, parameter in
             let name = parameter.secondName ?? parameter.firstName
             let label = name.flatMap { $0.tokenKind == .wildcard ? nil : $0.trimmedIdentifierName }
-            return AssociatedValue(index: index, label: label)
+            return AssociatedValue(index: index, label: label, isOptional: parameter.type.isSpelledAsOptional)
         }
         self.configuration = configuration
     }

@@ -1,3 +1,5 @@
+import SwiftSyntax
+
 /// A template whose placeholders have been resolved to Swift expressions.
 struct ResolvedTemplate: Equatable {
     enum Segment: Equatable {
@@ -36,6 +38,8 @@ struct AssociatedValue: Equatable {
     let index: Int
     /// The label (or internal name) of the value, if it has one.
     let label: String?
+    /// Whether the value's type is spelled as an optional.
+    let isOptional: Bool
 
     /// The name the generated `case let` pattern binds the value to.
     var bindingName: String {
@@ -45,6 +49,17 @@ struct AssociatedValue: Equatable {
     /// How the value is spelled in diagnostics.
     var placeholderSpelling: String {
         label.map { "{\($0)}" } ?? "{\(index)}"
+    }
+}
+
+enum Interpolation {
+    /// The expression interpolated for a value named `name`.
+    ///
+    /// Optionals are wrapped in `String(describing:)`, which prints exactly
+    /// what plain interpolation prints but without the compiler warning about
+    /// implicitly using an optional's debug description.
+    static func expression(for name: String, isOptional: Bool) -> String {
+        isOptional ? "String(describing: \(name))" : name
     }
 }
 
@@ -61,5 +76,21 @@ enum SwiftIdentifier {
 
     static func escaped(_ name: String) -> String {
         reservedWords.contains(name) ? "`\(name)`" : name
+    }
+}
+
+extension TypeSyntax {
+    /// Whether the type is written as `T?`, `T!`, or `Optional<T>`.
+    var isSpelledAsOptional: Bool {
+        if `is`(OptionalTypeSyntax.self) || `is`(ImplicitlyUnwrappedOptionalTypeSyntax.self) {
+            return true
+        }
+        if let identifier = `as`(IdentifierTypeSyntax.self) {
+            return identifier.name.text == "Optional" && identifier.genericArgumentClause != nil
+        }
+        if let member = `as`(MemberTypeSyntax.self) {
+            return member.baseType.trimmedDescription == "Swift" && member.name.text == "Optional"
+        }
+        return false
     }
 }
