@@ -24,5 +24,12 @@ let package = Package(
             ]
         ),
         .target(name: "Describable", dependencies: ["DescribableMacros"]),
+        .testTarget(
+            name: "DescribableMacrosTests",
+            dependencies: [
+                "DescribableMacros",
+                .product(name: "SwiftSyntaxMacrosGenericTestSupport", package: "swift-syntax"),
+            ]
+        ),
     ]
 )
