@@ -13,37 +13,40 @@ public enum DescribableMacro: ExtensionMacro {
         in context: some MacroExpansionContext
     ) throws -> [ExtensionDeclSyntax] {
         var log = DiagnosticLog()
-        let members = generatedMembers(of: node, attachedTo: declaration, in: context, log: &log)
+        let request = expansionRequest(of: node, attachedTo: declaration, in: context, log: &log)
+        let members = request.flatMap { generatedMembers(for: $0, log: &log) }
         log.emit(in: context)
-        guard let members, !log.hasErrors else {
+        guard let request, let members, !log.hasErrors else {
             return []
         }
-        let conformances = ["CustomStringConvertible"]
         let extensionDecl: DeclSyntax = """
-            extension \(type.trimmed): \(raw: conformances.joined(separator: ", ")) {
+            extension \(type.trimmed): \(raw: request.model.synthesizedConformances.joined(separator: ", ")) {
             \(raw: members.joined(separator: "\n\n"))
             }
             """
         return extensionDecl.as(ExtensionDeclSyntax.self).map { [$0] } ?? []
     }
 
-    private static func generatedMembers(
+    private static func expansionRequest(
         of node: AttributeSyntax,
         attachedTo declaration: some DeclGroupSyntax,
         in context: some MacroExpansionContext,
         log: inout DiagnosticLog
-    ) -> [String]? {
+    ) -> ExpansionRequest? {
         guard let kind = DeclarationKind(declaration) else {
             log.report(.unsupportedDeclaration, at: node)
             return nil
         }
-        let request = ExpansionRequest(
+        return ExpansionRequest(
             attribute: node,
             model: DeclarationModel(kind: kind, declaration: declaration, lexicalContext: context.lexicalContext),
             memberBlock: declaration.memberBlock,
             configuration: AttributeArguments.configuration(of: node, log: &log)
         )
-        switch kind {
+    }
+
+    private static func generatedMembers(for request: ExpansionRequest, log: inout DiagnosticLog) -> [String]? {
+        switch request.model.kind {
         case .enum:
             return EnumExpansion.members(for: request, log: &log)
         case .struct, .class:

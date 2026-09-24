@@ -1,3 +1,4 @@
+import SwiftDiagnostics
 import SwiftSyntax
 
 /// The nominal declaration kinds `@Describable` supports.
@@ -27,6 +28,8 @@ enum DeclarationKind: String, Sendable {
 struct DeclarationModel {
     let kind: DeclarationKind
     let name: String
+    /// The name token, for diagnostics that point at the declaration.
+    let nameToken: TokenSyntax
     let inheritedTypes: [InheritedTypeSyntax]
     /// The access modifier generated members must spell out so they can
     /// witness protocol requirements, e.g. `public`; `nil` for the default.
@@ -42,9 +45,29 @@ struct DeclarationModel {
 
     init(kind: DeclarationKind, declaration: some DeclGroupSyntax, lexicalContext: [Syntax]) {
         self.kind = kind
-        self.name = declaration.asProtocol(NamedDeclSyntax.self)?.name.trimmedIdentifierName ?? ""
+        self.nameToken = declaration.asProtocol(NamedDeclSyntax.self)?.name ?? .identifier("")
+        self.name = nameToken.trimmedIdentifierName
         self.inheritedTypes = Array(declaration.inheritanceClause?.inheritedTypes ?? [])
         self.accessModifier = Self.accessModifier(of: declaration, lexicalContext: lexicalContext)
+    }
+
+    /// The protocols the generated extension conforms the type to.
+    ///
+    /// `LocalizedError` is spelled through a typealias declared in the
+    /// `Description` module, which is visible wherever the macro is, so the
+    /// expansion compiles even in files that do not import Foundation.
+    var synthesizedConformances: [String] {
+        conformsToError ? ["CustomStringConvertible", "_DescribableLocalizedError"] : ["CustomStringConvertible"]
+    }
+
+    /// Reports an `error:` template on a type that is not an explicit `Error`.
+    func validateErrorTemplate(_ argument: LabeledExprSyntax?, log: inout DiagnosticLog) {
+        guard let argument, !conformsToError else { return }
+        log.report(
+            .errorTemplateRequiresError,
+            at: argument,
+            notes: [Note(node: Syntax(nameToken), message: DescriptionNote.errorConformanceMustBeExplicit(typeName: name))]
+        )
     }
 
     /// The entry of the inheritance clause naming `name` (optionally

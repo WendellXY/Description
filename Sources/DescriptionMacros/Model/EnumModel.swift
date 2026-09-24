@@ -13,6 +13,16 @@ indirect enum CaseTree<Case> {
     case enumCase(Case)
     case conditional([Clause])
 
+    /// Whether any case in the tree satisfies `predicate`.
+    func contains(where predicate: (Case) -> Bool) -> Bool {
+        switch self {
+        case let .enumCase(value):
+            predicate(value)
+        case let .conditional(clauses):
+            clauses.contains { clause in clause.members.contains { $0.contains(where: predicate) } }
+        }
+    }
+
     func map<Transformed>(_ transform: (Case) -> Transformed) -> CaseTree<Transformed> {
         switch self {
         case let .enumCase(value):

@@ -15,6 +15,7 @@ enum DescriptionDiagnostic: DiagnosticMessage {
     case staticField(name: String)
     case missingTemplate(DeclarationKind)
     case templateOnEnum
+    case errorTemplateRequiresError
     case duplicateConfiguration
     case emptyDescriptionAttribute
     case descriptionOutsideEnumCase
@@ -53,6 +54,8 @@ enum DescriptionDiagnostic: DiagnosticMessage {
             "@Describable requires a description template when applied to \(kind.article) \(kind.rawValue)"
         case .templateOnEnum:
             "@Describable does not accept templates when applied to an enum; annotate individual cases with @Description instead"
+        case .errorTemplateRequiresError:
+            "'error' is only available for types conforming to Error"
         case .duplicateConfiguration:
             "description is already configured for this declaration"
         case .emptyDescriptionAttribute:
@@ -81,6 +84,7 @@ enum DescriptionDiagnostic: DiagnosticMessage {
         case .staticField: "staticField"
         case .missingTemplate: "missingTemplate"
         case .templateOnEnum: "templateOnEnum"
+        case .errorTemplateRequiresError: "errorTemplateRequiresError"
         case .duplicateConfiguration: "duplicateConfiguration"
         case .emptyDescriptionAttribute: "emptyDescriptionAttribute"
         case .descriptionOutsideEnumCase: "descriptionOutsideEnumCase"
@@ -109,17 +113,21 @@ enum DescriptionDiagnostic: DiagnosticMessage {
 /// Notes attached to ``DescriptionDiagnostic``s.
 enum DescriptionNote: NoteMessage {
     case inheritedMembersNotVisible(typeName: String)
+    case errorConformanceMustBeExplicit(typeName: String)
 
     var message: String {
         switch self {
         case let .inheritedMembersNotVisible(typeName):
             "@Describable only sees properties declared in the body of '\(typeName)'; inherited properties cannot be used"
+        case let .errorConformanceMustBeExplicit(typeName):
+            "@Describable only detects 'Error' in the inheritance clause of '\(typeName)'; conformances declared in extensions are not detected"
         }
     }
 
     var noteID: MessageID {
         switch self {
         case .inheritedMembersNotVisible: MessageID(domain: "Describable", id: "inheritedMembersNotVisible")
+        case .errorConformanceMustBeExplicit: MessageID(domain: "Describable", id: "errorConformanceMustBeExplicit")
         }
     }
 }

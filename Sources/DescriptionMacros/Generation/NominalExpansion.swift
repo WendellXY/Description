@@ -2,19 +2,31 @@
 /// extension.
 enum NominalExpansion {
     static func members(for request: ExpansionRequest, log: inout DiagnosticLog) -> [String] {
-        guard let descriptionSource = request.configuration.description else {
-            log.report(.missingTemplate(request.model.kind), at: request.attribute)
+        let model = request.model
+        let configuration = request.configuration
+        model.validateErrorTemplate(configuration.errorArgument, log: &log)
+        guard let descriptionSource = configuration.description else {
+            log.report(.missingTemplate(model.kind), at: request.attribute)
             return []
         }
         let resolver = NominalMemberBindingResolver(
-            model: request.model,
+            model: model,
             properties: PropertyModel.properties(in: request.memberBlock)
         )
-        let description = resolver.resolve(descriptionSource, log: &log)
+        let modifiers = DescriptionGenerator.modifiers(for: model)
+        let description = DescriptionGenerator.descriptionProperty(
+            modifiers: modifiers,
+            body: resolver.resolve(descriptionSource, log: &log).stringLiteral
+        )
+        guard model.conformsToError else {
+            return [description]
+        }
+        let errorBody = configuration.errorDescription.map { resolver.resolve($0, log: &log).stringLiteral }
         return [
-            DescriptionGenerator.descriptionProperty(
-                modifiers: DescriptionGenerator.modifiers(for: request.model),
-                body: description.stringLiteral
+            description,
+            ErrorDescriptionGenerator.errorDescriptionProperty(
+                modifiers: modifiers,
+                body: errorBody ?? ErrorDescriptionGenerator.forwardingBody
             ),
         ]
     }
