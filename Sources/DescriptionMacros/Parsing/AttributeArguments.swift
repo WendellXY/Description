@@ -1,3 +1,4 @@
+import SwiftDiagnostics
 import SwiftSyntax
 
 /// Reads the `(_ description: String? = nil, error: String? = nil)` argument
@@ -13,6 +14,7 @@ enum AttributeArguments {
         let errorArgument = arguments.first { $0.label?.text == errorLabel }
         return DescriptionConfiguration(
             description: descriptionArgument.flatMap { templateSource(from: $0.expression, log: &log) },
+            hasDescriptionArgument: descriptionArgument.map { !$0.expression.is(NilLiteralExprSyntax.self) } ?? false,
             errorDescription: errorArgument.flatMap { templateSource(from: $0.expression, log: &log) },
             errorArgument: errorArgument.flatMap { $0.expression.is(NilLiteralExprSyntax.self) ? nil : $0 }
         )
@@ -46,11 +48,24 @@ enum AttributeArguments {
                 log.report(
                     .templateSyntax(syntaxError.kind),
                     at: literal,
-                    position: source.position(ofUTF8Offset: syntaxError.range.lowerBound)
+                    position: source.position(ofUTF8Offset: syntaxError.range.lowerBound),
+                    fixIts: escapingFixIt(for: syntaxError, in: source).map { [$0] } ?? []
                 )
             }
             return nil
         }
+    }
+}
+
+/// Stray braces are most likely meant literally, so offer to escape them.
+private func escapingFixIt(for error: TemplateSyntaxError, in source: TemplateSource) -> FixIt? {
+    let brace = switch error.kind {
+    case .unterminatedPlaceholder: "{"
+    case .unmatchedClosingBrace: "}"
+    default: String?.none
+    }
+    return brace.flatMap {
+        FixIts.replaceTemplateText(error.range, in: source, with: $0 + $0, message: .escapeBrace($0))
     }
 }
 

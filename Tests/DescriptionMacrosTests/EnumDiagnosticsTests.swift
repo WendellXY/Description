@@ -21,7 +21,8 @@ struct EnumDiagnosticsTests {
                 DiagnosticSpec(
                     message: "unknown description field 'resorce'; available fields: {resource}",
                     line: 3,
-                    column: 27
+                    column: 27,
+                    fixIts: [FixItSpec(message: "replace '{resorce}' with '{resource}'")]
                 ),
             ]
         )
@@ -90,10 +91,20 @@ struct EnumDiagnosticsTests {
             }
             """,
             diagnostics: [
-                DiagnosticSpec(message: "unmatched '}' in description template; use '}}' for a literal '}'", line: 3, column: 21),
+                DiagnosticSpec(
+                    message: "unmatched '}' in description template; use '}}' for a literal '}'",
+                    line: 3,
+                    column: 21,
+                    fixIts: [FixItSpec(message: "use '}}' for a literal '}'")]
+                ),
                 DiagnosticSpec(message: "member paths such as '{b.c}' are not supported in description templates", line: 3, column: 23),
                 DiagnosticSpec(message: "format specifiers such as '{x:2}' are not supported in description templates", line: 3, column: 29),
-                DiagnosticSpec(message: "unterminated description placeholder; use '{{' for a literal '{'", line: 3, column: 35),
+                DiagnosticSpec(
+                    message: "unterminated description placeholder; use '{{' for a literal '{'",
+                    line: 3,
+                    column: 35,
+                    fixIts: [FixItSpec(message: "use '{{' for a literal '{'")]
+                ),
             ]
         )
     }
@@ -181,7 +192,8 @@ struct EnumDiagnosticsTests {
                 DiagnosticSpec(
                     message: "@Describable does not accept templates when applied to an enum; annotate individual cases with @Description instead",
                     line: 1,
-                    column: 14
+                    column: 14,
+                    fixIts: [FixItSpec(message: "remove the template arguments")]
                 ),
             ]
         )
@@ -203,7 +215,12 @@ struct EnumDiagnosticsTests {
             }
             """,
             diagnostics: [
-                DiagnosticSpec(message: "description is already configured for this declaration", line: 4, column: 5),
+                DiagnosticSpec(
+                    message: "description is already configured for this declaration",
+                    line: 4,
+                    column: 5,
+                    fixIts: [FixItSpec(message: "remove the duplicate @Description")]
+                ),
             ]
         )
     }

@@ -99,7 +99,7 @@ enum EnumModel {
             return .empty
         }
         for duplicate in attributes.dropFirst() {
-            log.report(.duplicateConfiguration, at: duplicate)
+            log.report(.duplicateConfiguration, at: duplicate, fixIts: FixIts.removeAttribute(duplicate).map { [$0] } ?? [])
         }
         return AttributeArguments.configuration(of: first, log: &log)
     }

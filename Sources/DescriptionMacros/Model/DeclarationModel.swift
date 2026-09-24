@@ -30,7 +30,9 @@ struct DeclarationModel {
     let name: String
     /// The name token, for diagnostics that point at the declaration.
     let nameToken: TokenSyntax
-    let inheritedTypes: [InheritedTypeSyntax]
+    let inheritanceClause: InheritanceClauseSyntax?
+    /// Adds `Error` to the inheritance clause, when that edit is possible.
+    let errorConformanceFixIt: FixIt?
     /// The access modifier generated members must spell out so they can
     /// witness protocol requirements, e.g. `public`; `nil` for the default.
     let accessModifier: String?
@@ -47,7 +49,8 @@ struct DeclarationModel {
         self.kind = kind
         self.nameToken = declaration.asProtocol(NamedDeclSyntax.self)?.name ?? .identifier("")
         self.name = nameToken.trimmedIdentifierName
-        self.inheritedTypes = Array(declaration.inheritanceClause?.inheritedTypes ?? [])
+        self.inheritanceClause = declaration.inheritanceClause
+        self.errorConformanceFixIt = FixIts.addErrorConformance(to: declaration)
         self.accessModifier = Self.accessModifier(of: declaration, lexicalContext: lexicalContext)
     }
 
@@ -66,8 +69,13 @@ struct DeclarationModel {
         log.report(
             .errorTemplateRequiresError,
             at: argument,
-            notes: [Note(node: Syntax(nameToken), message: DescriptionNote.errorConformanceMustBeExplicit(typeName: name))]
+            notes: [Note(node: Syntax(nameToken), message: DescriptionNote.errorConformanceMustBeExplicit(typeName: name))],
+            fixIts: errorConformanceFixIt.map { [$0] } ?? []
         )
+    }
+
+    var inheritedTypes: [InheritedTypeSyntax] {
+        Array(inheritanceClause?.inheritedTypes ?? [])
     }
 
     /// The entry of the inheritance clause naming `name` (optionally

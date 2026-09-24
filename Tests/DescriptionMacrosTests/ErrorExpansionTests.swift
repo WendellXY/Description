@@ -204,7 +204,8 @@ struct ErrorExpansionTests {
                             line: 5,
                             column: 8
                         ),
-                    ]
+                    ],
+                    fixIts: [FixItSpec(message: "add 'Error' conformance")]
                 ),
             ]
         )
@@ -235,7 +236,8 @@ struct ErrorExpansionTests {
                             line: 2,
                             column: 6
                         ),
-                    ]
+                    ],
+                    fixIts: [FixItSpec(message: "add 'Error' conformance")]
                 ),
             ]
         )
@@ -251,7 +253,12 @@ struct ErrorExpansionTests {
             struct Failure: Error {}
             """,
             diagnostics: [
-                DiagnosticSpec(message: "@Describable requires a description template when applied to a struct", line: 1, column: 1),
+                DiagnosticSpec(
+                    message: "@Describable requires a description template when applied to a struct",
+                    line: 1,
+                    column: 1,
+                    fixIts: [FixItSpec(message: "add template \"Failure()\"")]
+                ),
             ]
         )
     }
@@ -271,7 +278,12 @@ struct ErrorExpansionTests {
             }
             """,
             diagnostics: [
-                DiagnosticSpec(message: "unknown description field 'cdoe'; available fields: {code}", line: 3, column: 31),
+                DiagnosticSpec(
+                    message: "unknown description field 'cdoe'; available fields: {code}",
+                    line: 3,
+                    column: 31,
+                    fixIts: [FixItSpec(message: "replace '{cdoe}' with '{code}'")]
+                ),
             ]
         )
     }

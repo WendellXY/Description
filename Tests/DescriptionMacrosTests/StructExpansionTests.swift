@@ -166,7 +166,12 @@ struct StructExpansionTests {
             }
             """,
             diagnostics: [
-                DiagnosticSpec(message: "@Describable requires a description template when applied to a struct", line: 1, column: 1),
+                DiagnosticSpec(
+                    message: "@Describable requires a description template when applied to a struct",
+                    line: 1,
+                    column: 1,
+                    fixIts: [FixItSpec(message: "add template \"User(id: {id})\"")]
+                ),
             ]
         )
     }
@@ -189,7 +194,12 @@ struct StructExpansionTests {
             }
             """,
             diagnostics: [
-                DiagnosticSpec(message: "unknown description field 'nmae'; available fields: {id}, {name}", line: 1, column: 20),
+                DiagnosticSpec(
+                    message: "unknown description field 'nmae'; available fields: {id}, {name}",
+                    line: 1,
+                    column: 20,
+                    fixIts: [FixItSpec(message: "replace '{nmae}' with '{name}'")]
+                ),
             ]
         )
     }

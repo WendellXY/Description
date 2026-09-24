@@ -127,7 +127,12 @@ struct ActorExpansionTests {
             actor Worker {}
             """,
             diagnostics: [
-                DiagnosticSpec(message: "@Describable requires a description template when applied to an actor", line: 1, column: 1),
+                DiagnosticSpec(
+                    message: "@Describable requires a description template when applied to an actor",
+                    line: 1,
+                    column: 1,
+                    fixIts: [FixItSpec(message: "add template \"Worker()\"")]
+                ),
             ]
         )
     }

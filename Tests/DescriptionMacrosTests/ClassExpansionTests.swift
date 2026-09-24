@@ -85,7 +85,12 @@ struct ClassExpansionTests {
             class Client {}
             """,
             diagnostics: [
-                DiagnosticSpec(message: "@Describable requires a description template when applied to a class", line: 1, column: 1),
+                DiagnosticSpec(
+                    message: "@Describable requires a description template when applied to a class",
+                    line: 1,
+                    column: 1,
+                    fixIts: [FixItSpec(message: "add template \"Client()\"")]
+                ),
             ]
         )
     }

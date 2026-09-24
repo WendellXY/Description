@@ -24,8 +24,12 @@ private struct ResolvedEnumCase {
 /// Generates the members of an enum's `@Describable` extension.
 enum EnumExpansion {
     static func members(for request: ExpansionRequest, log: inout DiagnosticLog) -> [String] {
-        if request.configuration.description != nil || request.configuration.errorArgument != nil {
-            log.report(.templateOnEnum, at: request.attribute.arguments.map(Syntax.init) ?? Syntax(request.attribute))
+        if request.configuration.hasDescriptionArgument || request.configuration.errorArgument != nil {
+            log.report(
+                .templateOnEnum,
+                at: request.attribute.arguments.map(Syntax.init) ?? Syntax(request.attribute),
+                fixIts: [FixIts.removeArguments(of: request.attribute)]
+            )
         }
         let model = request.model
         let cases = EnumModel.cases(in: request.memberBlock, log: &log).map { tree in

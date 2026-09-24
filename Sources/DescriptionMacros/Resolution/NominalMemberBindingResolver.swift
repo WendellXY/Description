@@ -51,7 +51,13 @@ struct NominalMemberBindingResolver {
                 .unknownField(name: name, available: availableFields, owner: owner),
                 at: source.literal,
                 position: position,
-                notes: inheritanceNotes
+                notes: inheritanceNotes,
+                fixIts: FixIts.correctField(
+                    placeholder,
+                    named: name,
+                    candidates: properties.filter { !$0.isStatic }.map(\.name),
+                    in: source
+                )
             )
             return nil
         }

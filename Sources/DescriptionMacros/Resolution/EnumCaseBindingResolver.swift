@@ -49,7 +49,8 @@ struct EnumCaseBindingResolver {
             log.report(
                 .unknownField(name: name, available: values.map(\.placeholderSpelling), owner: "case '\(enumCase.name)'"),
                 at: source.literal,
-                position: source.position(ofUTF8Offset: placeholder.range.lowerBound)
+                position: source.position(ofUTF8Offset: placeholder.range.lowerBound),
+                fixIts: FixIts.correctField(placeholder, named: name, candidates: values.compactMap(\.label), in: source)
             )
             return nil
         case let .positional(index):

@@ -26,12 +26,19 @@ struct TemplateSource {
 
 /// The templates configured for a type or for a single enum case.
 struct DescriptionConfiguration {
-    /// The `description` template, if one was given.
+    /// The `description` template, if one was given and is valid.
     let description: TemplateSource?
+    /// Whether a description argument was written, even an invalid one.
+    let hasDescriptionArgument: Bool
     /// The `errorDescription` template, if one was given.
     let errorDescription: TemplateSource?
     /// The `error:` argument, kept for diagnostics.
     let errorArgument: LabeledExprSyntax?
 
-    static let empty = DescriptionConfiguration(description: nil, errorDescription: nil, errorArgument: nil)
+    static let empty = DescriptionConfiguration(
+        description: nil,
+        hasDescriptionArgument: false,
+        errorDescription: nil,
+        errorArgument: nil
+    )
 }
