@@ -1,10 +1,11 @@
+import SwiftDiagnostics
 import SwiftSyntax
 import SwiftSyntaxBuilder
 import SwiftSyntaxMacros
 
 /// `@Describable`: synthesizes `CustomStringConvertible` for enums, structs,
 /// classes, and actors.
-public enum DescribableMacro: ExtensionMacro {
+public enum DescribableMacro: ExtensionMacro, PeerMacro {
     public static func expansion(
         of node: AttributeSyntax,
         attachedTo declaration: some DeclGroupSyntax,
@@ -26,6 +27,22 @@ public enum DescribableMacro: ExtensionMacro {
             }
             """
         return extensionDecl.as(ExtensionDeclSyntax.self).map { [$0] } ?? []
+    }
+
+    /// Everything but the extension is a type-level concern, so the macro
+    /// only generates code through its extension role. The peer role exists
+    /// so that attaching `@Describable` to something that is not a type
+    /// produces a diagnostic from the macro rather than a generic compiler
+    /// error about macro roles.
+    public static func expansion(
+        of node: AttributeSyntax,
+        providingPeersOf declaration: some DeclSyntaxProtocol,
+        in context: some MacroExpansionContext
+    ) throws -> [DeclSyntax] {
+        if !declaration.isProtocol(DeclGroupSyntax.self) {
+            context.diagnose(Diagnostic(node: node, message: DescriptionDiagnostic.unsupportedDeclaration))
+        }
+        return []
     }
 
     private static func expansionRequest(

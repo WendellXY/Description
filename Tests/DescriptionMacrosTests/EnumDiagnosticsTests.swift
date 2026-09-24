@@ -287,6 +287,25 @@ struct EnumDiagnosticsTests {
         )
     }
 
+    @Test func functionIsUnsupported() {
+        assertExpansion(
+            """
+            @Describable
+            func foo() {}
+            """,
+            expandedSource: """
+            func foo() {}
+            """,
+            diagnostics: [
+                DiagnosticSpec(
+                    message: "@Describable can only be applied to enum, struct, class, or actor declarations",
+                    line: 1,
+                    column: 1
+                ),
+            ]
+        )
+    }
+
     @Test func protocolIsUnsupported() {
         assertExpansion(
             """

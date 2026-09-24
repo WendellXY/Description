@@ -31,6 +31,7 @@ import Foundation
     conformances: CustomStringConvertible, LocalizedError,
     names: named(description), named(errorDescription)
 )
+@attached(peer)
 public macro Describable(
     _ description: String? = nil,
     error: String? = nil
