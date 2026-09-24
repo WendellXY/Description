@@ -1,3 +1,6 @@
+import SwiftDiagnostics
+import SwiftSyntax
+
 /// Resolves template placeholders against the instance properties declared
 /// in a struct, class, or actor body.
 struct NominalMemberBindingResolver {
@@ -47,10 +50,20 @@ struct NominalMemberBindingResolver {
             log.report(
                 .unknownField(name: name, available: availableFields, owner: owner),
                 at: source.literal,
-                position: position
+                position: position,
+                notes: inheritanceNotes
             )
             return nil
         }
+    }
+
+    /// A class's superclass members are not visible to the macro; point at
+    /// the inheritance clause so the limitation is discoverable.
+    private var inheritanceNotes: [Note] {
+        guard model.kind == .class, let superclass = model.inheritedTypes.first else {
+            return []
+        }
+        return [Note(node: Syntax(superclass.type), message: DescriptionNote.inheritedMembersNotVisible(typeName: model.name))]
     }
 
     private var availableFields: [String] {

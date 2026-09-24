@@ -46,9 +46,9 @@ public enum DescribableMacro: ExtensionMacro {
         switch kind {
         case .enum:
             return EnumExpansion.members(for: request, log: &log)
-        case .struct:
+        case .struct, .class:
             return NominalExpansion.members(for: request, log: &log)
-        case .class, .actor:
+        case .actor:
             return nil
         }
     }

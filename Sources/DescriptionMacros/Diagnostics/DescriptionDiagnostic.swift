@@ -106,6 +106,24 @@ enum DescriptionDiagnostic: DiagnosticMessage {
     }
 }
 
+/// Notes attached to ``DescriptionDiagnostic``s.
+enum DescriptionNote: NoteMessage {
+    case inheritedMembersNotVisible(typeName: String)
+
+    var message: String {
+        switch self {
+        case let .inheritedMembersNotVisible(typeName):
+            "@Describable only sees properties declared in the body of '\(typeName)'; inherited properties cannot be used"
+        }
+    }
+
+    var noteID: MessageID {
+        switch self {
+        case .inheritedMembersNotVisible: MessageID(domain: "Describable", id: "inheritedMembersNotVisible")
+        }
+    }
+}
+
 /// Collects diagnostics during an expansion so that every problem is
 /// reported at once and code is only generated when there are no errors.
 struct DiagnosticLog {
