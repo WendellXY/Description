@@ -18,6 +18,10 @@ enum DescriptionDiagnostic: DiagnosticMessage {
     case templateOnEnum
     case errorTemplateRequiresError
     case duplicateConfiguration
+    case explicitConformance(typeName: String, protocolName: String)
+    case explicitLocalizedError
+    case existingMember(name: String, protocolName: String)
+    case inheritedConformance(typeName: String, protocolName: String)
     case emptyDescriptionAttribute
     case descriptionOutsideEnumCase
     case descriptionWithoutDescribable
@@ -61,6 +65,14 @@ enum DescriptionDiagnostic: DiagnosticMessage {
             "'error' is only available for types conforming to Error"
         case .duplicateConfiguration:
             "description is already configured for this declaration"
+        case let .explicitConformance(typeName, protocolName):
+            "'\(typeName)' already declares a conformance to '\(protocolName)'; @Describable cannot synthesize a conformance that already exists"
+        case .explicitLocalizedError:
+            "@Describable synthesizes 'LocalizedError' for types that conform to 'Error'; declare 'Error' instead"
+        case let .existingMember(name, protocolName):
+            "'\(name)' is already implemented; @Describable cannot synthesize '\(protocolName)' for a type that implements it manually"
+        case let .inheritedConformance(typeName, protocolName):
+            "'\(typeName)' already conforms to '\(protocolName)' through a superclass or an extension; @Describable cannot synthesize a conformance that already exists"
         case .emptyDescriptionAttribute:
             "@Description requires a description template, an 'error' template, or both"
         case .descriptionOutsideEnumCase:
@@ -90,6 +102,10 @@ enum DescriptionDiagnostic: DiagnosticMessage {
         case .templateOnEnum: "templateOnEnum"
         case .errorTemplateRequiresError: "errorTemplateRequiresError"
         case .duplicateConfiguration: "duplicateConfiguration"
+        case .explicitConformance: "explicitConformance"
+        case .explicitLocalizedError: "explicitLocalizedError"
+        case .existingMember: "existingMember"
+        case .inheritedConformance: "inheritedConformance"
         case .emptyDescriptionAttribute: "emptyDescriptionAttribute"
         case .descriptionOutsideEnumCase: "descriptionOutsideEnumCase"
         case .descriptionWithoutDescribable: "descriptionWithoutDescribable"

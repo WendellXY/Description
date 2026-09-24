@@ -14,6 +14,7 @@ public enum DescribableMacro: ExtensionMacro {
     ) throws -> [ExtensionDeclSyntax] {
         var log = DiagnosticLog()
         let request = expansionRequest(of: node, attachedTo: declaration, in: context, log: &log)
+        request.map { ConformanceValidation.validate($0, protocols: protocols, log: &log) }
         let members = request.flatMap { generatedMembers(for: $0, log: &log) }
         log.emit(in: context)
         guard let request, let members, !log.hasErrors else {
