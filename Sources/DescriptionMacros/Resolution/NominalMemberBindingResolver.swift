@@ -41,7 +41,7 @@ struct NominalMemberBindingResolver {
         case let .named(name):
             let matches = properties.filter { $0.name == name }
             if let property = matches.first(where: { !$0.isStatic }) {
-                return property
+                return checkIsolation(of: property, at: position, in: source, log: &log)
             }
             if !matches.isEmpty {
                 log.report(.staticField(name: name), at: source.literal, position: position)
@@ -55,6 +55,31 @@ struct NominalMemberBindingResolver {
             )
             return nil
         }
+    }
+
+    /// Actor-isolated state cannot be read from the synchronous, nonisolated
+    /// `description` the macro generates.
+    private func checkIsolation(
+        of property: PropertyModel,
+        at position: AbsolutePosition,
+        in source: TemplateSource,
+        log: inout DiagnosticLog
+    ) -> PropertyModel? {
+        guard model.kind == .actor, !property.isReadableOutsideActorIsolation else {
+            return property
+        }
+        log.report(
+            .actorIsolatedField(name: property.name),
+            at: source.literal,
+            position: position,
+            notes: [
+                Note(
+                    node: Syntax(property.declaration),
+                    message: DescriptionNote.isolatedPropertyDeclaredHere(name: property.name)
+                ),
+            ]
+        )
+        return nil
     }
 
     /// A class's superclass members are not visible to the macro; point at

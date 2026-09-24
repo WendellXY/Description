@@ -16,6 +16,14 @@ struct PropertyModel {
         declaration.modifiers.contains { $0.name.tokenKind == .keyword(.nonisolated) }
     }
 
+    /// Whether a synchronous, `nonisolated` member of an actor may read the
+    /// property: it is `nonisolated`, or it is a stored `let` constant, which
+    /// the compiler allows to be read from within the module provided its
+    /// type is `Sendable`. The `Sendable` requirement is left to the compiler.
+    var isReadableOutsideActorIsolation: Bool {
+        isNonisolated || (isImmutable && isStored)
+    }
+
     /// Collects the properties declared in `memberBlock`, including those
     /// inside `#if` blocks. Members from superclasses, protocols, and
     /// extensions elsewhere are deliberately not visible.

@@ -13,6 +13,7 @@ enum DescriptionDiagnostic: DiagnosticMessage {
     case positionalFieldOutOfRange(index: Int, owner: String, count: Int)
     case positionalFieldOnNominal(index: Int, owner: String)
     case staticField(name: String)
+    case actorIsolatedField(name: String)
     case missingTemplate(DeclarationKind)
     case templateOnEnum
     case errorTemplateRequiresError
@@ -50,6 +51,8 @@ enum DescriptionDiagnostic: DiagnosticMessage {
             "positional description field '{\(index)}' is only available for enum associated values; refer to the properties of \(owner) by name"
         case let .staticField(name):
             "'{\(name)}' refers to a static property; only instance properties can be used in a description"
+        case let .actorIsolatedField(name):
+            "'{\(name)}' refers to actor-isolated state and cannot be used in a synchronous description"
         case let .missingTemplate(kind):
             "@Describable requires a description template when applied to \(kind.article) \(kind.rawValue)"
         case .templateOnEnum:
@@ -82,6 +85,7 @@ enum DescriptionDiagnostic: DiagnosticMessage {
         case .positionalFieldOutOfRange: "positionalFieldOutOfRange"
         case .positionalFieldOnNominal: "positionalFieldOnNominal"
         case .staticField: "staticField"
+        case .actorIsolatedField: "actorIsolatedField"
         case .missingTemplate: "missingTemplate"
         case .templateOnEnum: "templateOnEnum"
         case .errorTemplateRequiresError: "errorTemplateRequiresError"
@@ -114,6 +118,7 @@ enum DescriptionDiagnostic: DiagnosticMessage {
 enum DescriptionNote: NoteMessage {
     case inheritedMembersNotVisible(typeName: String)
     case errorConformanceMustBeExplicit(typeName: String)
+    case isolatedPropertyDeclaredHere(name: String)
 
     var message: String {
         switch self {
@@ -121,6 +126,8 @@ enum DescriptionNote: NoteMessage {
             "@Describable only sees properties declared in the body of '\(typeName)'; inherited properties cannot be used"
         case let .errorConformanceMustBeExplicit(typeName):
             "@Describable only detects 'Error' in the inheritance clause of '\(typeName)'; conformances declared in extensions are not detected"
+        case let .isolatedPropertyDeclaredHere(name):
+            "'\(name)' is isolated to the actor; only 'nonisolated' properties and 'let' constants can be read synchronously"
         }
     }
 
@@ -128,6 +135,7 @@ enum DescriptionNote: NoteMessage {
         switch self {
         case .inheritedMembersNotVisible: MessageID(domain: "Describable", id: "inheritedMembersNotVisible")
         case .errorConformanceMustBeExplicit: MessageID(domain: "Describable", id: "errorConformanceMustBeExplicit")
+        case .isolatedPropertyDeclaredHere: MessageID(domain: "Describable", id: "isolatedPropertyDeclaredHere")
         }
     }
 }

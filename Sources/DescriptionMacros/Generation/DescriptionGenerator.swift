@@ -1,9 +1,12 @@
 /// Generates the computed properties that witness protocol requirements.
 enum DescriptionGenerator {
     /// Modifiers for generated members: the type's access level, so that
-    /// public and package types get witnesses as visible as the conformance.
+    /// public and package types get witnesses as visible as the conformance,
+    /// and `nonisolated` for actors, whose members are otherwise isolated and
+    /// could not satisfy the synchronous protocol requirements.
     static func modifiers(for model: DeclarationModel) -> [String] {
-        model.accessModifier.map { [$0] } ?? []
+        let access = model.accessModifier.map { [$0] } ?? []
+        return model.kind == .actor ? access + ["nonisolated"] : access
     }
 
     /// `var description: String { ... }` with the given getter body.
