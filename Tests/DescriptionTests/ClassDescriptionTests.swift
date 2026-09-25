@@ -1,7 +1,8 @@
 import Description
 import Testing
 
-@Describable("Client(host: {host})")
+@Describable
+@Description("Client(host: {host})")
 final class Client {
     let host: String
 
@@ -18,7 +19,8 @@ class Base {
     }
 }
 
-@Describable("Child(name: {name})")
+@Describable
+@Description("Child(name: {name})")
 class Child: Base {
     var name: String
 
@@ -28,7 +30,8 @@ class Child: Base {
     }
 }
 
-@Describable("Node(value: {value})")
+@Describable
+@Description("Node(value: {value})")
 open class Node<Value> {
     public let value: Value
 

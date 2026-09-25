@@ -54,21 +54,12 @@ struct DeclarationModel {
         self.accessModifier = Self.accessModifier(of: declaration, lexicalContext: lexicalContext)
     }
 
-    /// The protocols the generated extension conforms the type to.
-    ///
-    /// `LocalizedError` is spelled through a typealias declared in the
-    /// `Description` module, which is visible wherever the macro is, so the
-    /// expansion compiles even in files that do not import Foundation.
-    var synthesizedConformances: [String] {
-        conformsToError ? ["CustomStringConvertible", "_DescribableLocalizedError"] : ["CustomStringConvertible"]
-    }
-
-    /// Reports an `error:` template on a type that is not an explicit `Error`.
-    func validateErrorTemplate(_ argument: LabeledExprSyntax?, log: inout DiagnosticLog) {
-        guard let argument, !conformsToError else { return }
+    /// Reports an `.error` target on a type that is not an explicit `Error`.
+    func validateErrorTemplate(at node: some SyntaxProtocol, log: inout DiagnosticLog) {
+        guard !conformsToError else { return }
         log.report(
             .errorTemplateRequiresError,
-            at: argument,
+            at: node,
             notes: [Note(node: Syntax(nameToken), message: DescriptionNote.errorConformanceMustBeExplicit(typeName: name))],
             fixIts: errorConformanceFixIt.map { [$0] } ?? []
         )

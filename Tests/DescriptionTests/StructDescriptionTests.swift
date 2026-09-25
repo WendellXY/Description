@@ -2,28 +2,33 @@ import Description
 import Foundation
 import Testing
 
-@Describable("User(id: {id}, name: {name})")
+@Describable
+@Description("User(id: {id}, name: {name})")
 struct User {
     let id: Int
     let name: String
 }
 
-@Describable("Profile(nickname: {nickname})")
+@Describable
+@Description("Profile(nickname: {nickname})")
 struct Profile {
     let nickname: String?
 }
 
-@Describable("Box(value: {value})")
+@Describable
+@Description("Box(value: {value})")
 struct Box<T> {
     let value: T
 }
 
-@Describable("Object {{ id: {id} }}")
+@Describable
+@Description("Object {{ id: {id} }}")
 public struct PublicObject {
     public let id: Int
 }
 
-@Describable("PackageValue({value})")
+@Describable
+@Description("PackageValue({value})")
 package struct PackageValue {
     let value: Int
 }
@@ -31,14 +36,16 @@ package struct PackageValue {
 public enum Geometry {}
 
 public extension Geometry {
-    @Describable("Point({x}, {y})")
+    @Describable
+    @Description("Point({x}, {y})")
     struct Point {
         let x: Int
         let y: Int
     }
 }
 
-@Describable("Counter(count: {count}, doubled: {doubled})")
+@Describable
+@Description("Counter(count: {count}, doubled: {doubled})")
 struct Counter {
     var count: Int
     var doubled: Int { count * 2 }

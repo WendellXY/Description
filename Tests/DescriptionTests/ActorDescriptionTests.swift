@@ -2,7 +2,8 @@ import Description
 import Foundation
 import Testing
 
-@Describable("Worker(id: {id}, name: {name})")
+@Describable
+@Description("Worker(id: {id}, name: {name})")
 actor Worker {
     nonisolated let id: Int
     let name: String
@@ -14,7 +15,8 @@ actor Worker {
     }
 }
 
-@Describable("Session({label})")
+@Describable
+@Description("Session({label})")
 public actor Session {
     nonisolated var label: String { "session" }
 }

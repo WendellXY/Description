@@ -40,7 +40,8 @@ struct FixItTests {
     @Test func misspelledPropertyIsCorrected() {
         assertExpansion(
             """
-            @Describable("User({nmae})")
+            @Describable
+            @Description("User({nmae})")
             struct User {
                 let name: String
             }
@@ -53,14 +54,15 @@ struct FixItTests {
             diagnostics: [
                 DiagnosticSpec(
                     message: "unknown description field 'nmae'; available fields: {name}",
-                    line: 1,
+                    line: 2,
                     column: 20,
                     fixIts: [FixItSpec(message: "replace '{nmae}' with '{name}'")]
                 ),
             ],
             applyFixIts: ["replace '{nmae}' with '{name}'"],
             fixedSource: """
-            @Describable("User({name})")
+            @Describable
+            @Description("User({name})")
             struct User {
                 let name: String
             }
@@ -71,7 +73,8 @@ struct FixItTests {
     @Test func distantNamesGetNoSuggestion() {
         assertExpansion(
             """
-            @Describable("{identifier}")
+            @Describable
+            @Description("{identifier}")
             struct User {
                 let name: String
             }
@@ -82,7 +85,7 @@ struct FixItTests {
             }
             """,
             diagnostics: [
-                DiagnosticSpec(message: "unknown description field 'identifier'; available fields: {name}", line: 1, column: 15),
+                DiagnosticSpec(message: "unknown description field 'identifier'; available fields: {name}", line: 2, column: 15),
             ]
         )
     }
@@ -90,7 +93,8 @@ struct FixItTests {
     @Test func strayBracesAreEscaped() {
         assertExpansion(
             """
-            @Describable("Object { id: {id} }")
+            @Describable
+            @Description("Object { id: {id} }")
             struct Object {
                 let id: Int
             }
@@ -103,20 +107,21 @@ struct FixItTests {
             diagnostics: [
                 DiagnosticSpec(
                     message: "unterminated description placeholder; use '{{' for a literal '{'",
-                    line: 1,
+                    line: 2,
                     column: 22,
                     fixIts: [FixItSpec(message: "use '{{' for a literal '{'")]
                 ),
                 DiagnosticSpec(
                     message: "unmatched '}' in description template; use '}}' for a literal '}'",
-                    line: 1,
+                    line: 2,
                     column: 33,
                     fixIts: [FixItSpec(message: "use '}}' for a literal '}'")]
                 ),
             ],
             applyFixIts: ["use '{{' for a literal '{'"],
             fixedSource: """
-            @Describable("Object {{ id: {id} }")
+            @Describable
+            @Description("Object {{ id: {id} }")
             struct Object {
                 let id: Int
             }
@@ -148,12 +153,13 @@ struct FixItTests {
                     message: "@Describable requires a description template when applied to a struct",
                     line: 1,
                     column: 1,
-                    fixIts: [FixItSpec(message: #"add template "User(id: {id}, name: {name})""#)]
+                    fixIts: [FixItSpec(message: #"add @Description("User(id: {id}, name: {name})")"#)]
                 ),
             ],
-            applyFixIts: [#"add template "User(id: {id}, name: {name})""#],
+            applyFixIts: [#"add @Description("User(id: {id}, name: {name})")"#],
             fixedSource: """
-            @Describable("User(id: {id}, name: {name})")
+            @Describable
+            @Description("User(id: {id}, name: {name})")
             struct User {
                 let id: UUID
                 var name: String
@@ -167,7 +173,8 @@ struct FixItTests {
     @Test func missingTemplateKeepsErrorArgumentAndSkipsIsolatedState() {
         assertExpansion(
             """
-            @Describable(error: "failed")
+            @Describable
+            @Description(.error, "failed")
             actor Worker: Error {
                 nonisolated let id: Int
                 var jobs: [Int]
@@ -184,46 +191,17 @@ struct FixItTests {
                     message: "@Describable requires a description template when applied to an actor",
                     line: 1,
                     column: 1,
-                    fixIts: [FixItSpec(message: #"add template "Worker(id: {id})""#)]
+                    fixIts: [FixItSpec(message: #"add @Description("Worker(id: {id})")"#)]
                 ),
             ],
-            applyFixIts: [#"add template "Worker(id: {id})""#],
+            applyFixIts: [#"add @Description("Worker(id: {id})")"#],
             fixedSource: """
-            @Describable("Worker(id: {id})", error: "failed")
+            @Describable
+            @Description("Worker(id: {id})")
+            @Description(.error, "failed")
             actor Worker: Error {
                 nonisolated let id: Int
                 var jobs: [Int]
-            }
-            """
-        )
-    }
-
-    @Test func enumTemplateArgumentsAreRemoved() {
-        assertExpansion(
-            """
-            @Describable("State")
-            enum State {
-                case idle
-            }
-            """,
-            expandedSource: """
-            enum State {
-                case idle
-            }
-            """,
-            diagnostics: [
-                DiagnosticSpec(
-                    message: "@Describable does not accept templates when applied to an enum; annotate individual cases with @Description instead",
-                    line: 1,
-                    column: 14,
-                    fixIts: [FixItSpec(message: "remove the template arguments")]
-                ),
-            ],
-            applyFixIts: ["remove the template arguments"],
-            fixedSource: """
-            @Describable
-            enum State {
-                case idle
             }
             """
         )
@@ -273,7 +251,9 @@ struct FixItTests {
     func errorConformanceIsAdded(header: String, fixedHeader: String) {
         assertExpansion(
             """
-            @Describable("User", error: "Invalid user")
+            @Describable
+            @Description("User")
+            @Description(.error, "Invalid user")
             \(header)
             }
             """,
@@ -283,13 +263,13 @@ struct FixItTests {
             """,
             diagnostics: [
                 DiagnosticSpec(
-                    message: "'error' is only available for types conforming to Error",
-                    line: 1,
-                    column: 22,
+                    message: "'.error' is only available for types conforming to Error",
+                    line: 3,
+                    column: 14,
                     notes: [
                         NoteSpec(
                             message: "@Describable only detects 'Error' in the inheritance clause of 'User'; conformances declared in extensions are not detected",
-                            line: 2,
+                            line: 4,
                             column: header.hasPrefix("final") ? 13 : 8
                         ),
                     ],
@@ -298,7 +278,9 @@ struct FixItTests {
             ],
             applyFixIts: ["add 'Error' conformance"],
             fixedSource: """
-            @Describable("User", error: "Invalid user")
+            @Describable
+            @Description("User")
+            @Description(.error, "Invalid user")
             \(fixedHeader)
             }
             """
@@ -310,7 +292,7 @@ struct FixItTests {
             """
             @Describable
             enum State {
-                @Description(error: "Something failed")
+                @Description(.error, "Something failed")
                 case idle
             }
             """,
@@ -321,7 +303,7 @@ struct FixItTests {
             """,
             diagnostics: [
                 DiagnosticSpec(
-                    message: "'error' is only available for types conforming to Error",
+                    message: "'.error' is only available for types conforming to Error",
                     line: 3,
                     column: 18,
                     notes: [
@@ -338,7 +320,7 @@ struct FixItTests {
             fixedSource: """
             @Describable
             enum State: Error {
-                @Description(error: "Something failed")
+                @Description(.error, "Something failed")
                 case idle
             }
             """

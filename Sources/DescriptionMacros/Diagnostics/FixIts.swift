@@ -6,7 +6,6 @@ enum DescriptionFixItMessage: FixItMessage {
     case replaceField(original: String, replacement: String)
     case escapeBrace(String)
     case addTemplate(String)
-    case removeTemplateArguments
     case addErrorConformance
     case removeDuplicateAttribute
     case removeConformance(String)
@@ -16,8 +15,7 @@ enum DescriptionFixItMessage: FixItMessage {
         switch self {
         case let .replaceField(original, replacement): "replace '\(original)' with '\(replacement)'"
         case let .escapeBrace(brace): "use '\(brace)\(brace)' for a literal '\(brace)'"
-        case let .addTemplate(template): "add template \"\(template)\""
-        case .removeTemplateArguments: "remove the template arguments"
+        case let .addTemplate(template): "add @Description(\"\(template)\")"
         case .addErrorConformance: "add 'Error' conformance"
         case .removeDuplicateAttribute: "remove the duplicate @Description"
         case let .removeConformance(name): "remove '\(name)' conformance"
@@ -52,34 +50,20 @@ enum FixIts {
         )
     }
 
-    /// Adds `template` as the first argument of `attribute`.
-    static func addTemplate(_ template: String, to attribute: AttributeSyntax) -> FixIt {
-        let templateArgument = LabeledExprSyntax(expression: StringLiteralExprSyntax(content: template))
-        let existing: [LabeledExprSyntax] = if case let .argumentList(list)? = attribute.arguments { Array(list) } else { [] }
-        let arguments = existing.isEmpty
-            ? [templateArgument]
-            : [templateArgument.with(\.trailingComma, .commaToken(trailingTrivia: .space))] + existing
-        let newAttribute = attribute
-            .with(\.leftParen, .leftParenToken())
-            .with(\.arguments, .argumentList(LabeledExprListSyntax(arguments)))
-            .with(\.rightParen, .rightParenToken())
+    /// Inserts `@Description("<template>")` on the line after `@Describable`.
+    static func addDescriptionAttribute(_ template: String, afterDescribableIn list: AttributeListSyntax) -> FixIt? {
+        guard let index = list.firstIndex(where: {
+            $0.as(AttributeSyntax.self)?.isNamed(AttributeArguments.describableAttribute) == true
+        }), let attribute = list[index].as(AttributeSyntax.self) else {
+            return nil
+        }
+        let newAttribute: AttributeSyntax = "@Description(\(literal: template))"
+        let element = AttributeListSyntax.Element(newAttribute.with(\.leadingTrivia, .newline + attribute.leadingTrivia.indentation))
+        var elements = Array(list)
+        elements.insert(element, at: list.distance(from: list.startIndex, to: index) + 1)
         return FixIt(
             message: DescriptionFixItMessage.addTemplate(template),
-            changes: [.replace(oldNode: Syntax(attribute), newNode: Syntax(newAttribute))]
-        )
-    }
-
-    /// Turns `@Describable(...)` into `@Describable`.
-    static func removeArguments(of attribute: AttributeSyntax) -> FixIt {
-        let trailingTrivia = attribute.trailingTrivia
-        let newAttribute = attribute
-            .with(\.leftParen, nil)
-            .with(\.arguments, nil)
-            .with(\.rightParen, nil)
-            .with(\.trailingTrivia, trailingTrivia)
-        return FixIt(
-            message: DescriptionFixItMessage.removeTemplateArguments,
-            changes: [.replace(oldNode: Syntax(attribute), newNode: Syntax(newAttribute))]
+            changes: [.replace(oldNode: Syntax(list), newNode: Syntax(AttributeListSyntax(elements)))]
         )
     }
 
@@ -194,6 +178,18 @@ enum FixIts {
             .with(\.genericParameterClause, decl.genericParameterClause?.with(\.trailingTrivia, clause == nil ? bodyTrivia : []))
             .with(\.name, decl.genericParameterClause == nil ? decl.name.with(\.trailingTrivia, clause == nil ? bodyTrivia : []) : decl.name)
         return header.with(\.inheritanceClause, clause?.with(\.trailingTrivia, bodyTrivia))
+    }
+}
+
+extension Trivia {
+    /// The spaces and tabs after the last newline, i.e. a line's indentation.
+    var indentation: Trivia {
+        Trivia(pieces: pieces.reversed().prefix { piece in
+            switch piece {
+            case .spaces, .tabs: true
+            default: false
+            }
+        }.reversed())
     }
 }
 

@@ -6,7 +6,8 @@ struct ClassExpansionTests {
     @Test func finalClass() {
         assertExpansion(
             """
-            @Describable("Connection(host: {host}, port: {port})")
+            @Describable
+            @Description("Connection(host: {host}, port: {port})")
             final class Connection {
                 let host: String
                 var port: Int
@@ -30,7 +31,8 @@ struct ClassExpansionTests {
     @Test func openClassGetsPublicWitness() {
         assertExpansion(
             """
-            @Describable("Client(host: {host})")
+            @Describable
+            @Description("Client(host: {host})")
             open class Client {
                 public let host: String
             }
@@ -52,7 +54,8 @@ struct ClassExpansionTests {
     @Test func inheritedMembersAreNotVisible() {
         assertExpansion(
             """
-            @Describable("id={id}")
+            @Describable
+            @Description("id={id}")
             class Child: Base {}
             """,
             expandedSource: """
@@ -61,12 +64,12 @@ struct ClassExpansionTests {
             diagnostics: [
                 DiagnosticSpec(
                     message: "unknown description field 'id'; class 'Child' has no fields that can be used in a description",
-                    line: 1,
+                    line: 2,
                     column: 18,
                     notes: [
                         NoteSpec(
                             message: "@Describable only sees properties declared in the body of 'Child'; inherited properties cannot be used",
-                            line: 2,
+                            line: 3,
                             column: 14
                         ),
                     ]
@@ -89,7 +92,7 @@ struct ClassExpansionTests {
                     message: "@Describable requires a description template when applied to a class",
                     line: 1,
                     column: 1,
-                    fixIts: [FixItSpec(message: "add template \"Client()\"")]
+                    fixIts: [FixItSpec(message: "add @Description(\"Client()\")")]
                 ),
             ]
         )

@@ -1,38 +1,38 @@
 /// Generates the members of a struct's, class's, or actor's `@Describable`
 /// extension.
 enum NominalExpansion {
-    static func members(for request: ExpansionRequest, log: inout DiagnosticLog) -> [String] {
+    static func members(for request: ExpansionRequest, log: inout DiagnosticLog) -> GeneratedMembers {
         let model = request.model
-        let configuration = request.configuration
-        model.validateErrorTemplate(configuration.errorArgument, log: &log)
+        let templates = request.typeTemplates
+        let targets = TargetSelection.targets(for: request, templates: [templates], log: &log)
         let properties = PropertyModel.properties(in: request.memberBlock)
-        guard let descriptionSource = configuration.description else {
-            // An invalid template has already been diagnosed.
-            guard !configuration.hasDescriptionArgument else { return [] }
+        let resolver = NominalMemberBindingResolver(model: model, properties: properties)
+        let texts = templates.templates.reduce(into: [DescriptionTarget: ResolvedTemplate]()) { texts, template in
+            texts[template.target] = template.source.map { resolver.resolve($0, log: &log) }
+        }
+        let needsMainText = targets.contains { $0 == .description || !templates.configures($0) }
+        if needsMainText, !templates.configures(.description) {
             log.report(
                 .missingTemplate(model.kind),
                 at: request.attribute,
-                fixIts: [FixIts.addTemplate(skeletonTemplate(for: model, properties: properties), to: request.attribute)]
+                fixIts: FixIts.addDescriptionAttribute(
+                    skeletonTemplate(for: model, properties: properties),
+                    afterDescribableIn: request.typeAttributes
+                ).map { [$0] } ?? []
             )
-            return []
         }
-        let resolver = NominalMemberBindingResolver(model: model, properties: properties)
         let modifiers = DescriptionGenerator.modifiers(for: model)
-        let description = DescriptionGenerator.descriptionProperty(
-            modifiers: modifiers,
-            body: resolver.resolve(descriptionSource, log: &log).stringLiteral
-        )
-        guard model.conformsToError else {
-            return [description]
+        let members = targets.map { target -> String in
+            let body = if target != .description, let own = texts[target] {
+                own.stringLiteral
+            } else if target != .description, targets.contains(.description) {
+                DescriptionGenerator.forwardingBody
+            } else {
+                texts[.description]?.stringLiteral ?? "\"\""
+            }
+            return DescriptionGenerator.property(for: target, modifiers: modifiers, body: body)
         }
-        let errorBody = configuration.errorDescription.map { resolver.resolve($0, log: &log).stringLiteral }
-        return [
-            description,
-            ErrorDescriptionGenerator.errorDescriptionProperty(
-                modifiers: modifiers,
-                body: errorBody ?? ErrorDescriptionGenerator.forwardingBody
-            ),
-        ]
+        return GeneratedMembers(targets: targets, members: members)
     }
 
     /// A memberwise template such as `User(id: {id}, name: {name})` built

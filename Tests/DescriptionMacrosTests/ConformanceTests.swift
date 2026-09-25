@@ -7,7 +7,8 @@ struct ConformanceTests {
     @Test func explicitCustomStringConvertible() {
         assertExpansion(
             """
-            @Describable("Foo")
+            @Describable
+            @Description("Foo")
             struct Foo: Hashable, CustomStringConvertible {
             }
             """,
@@ -18,7 +19,7 @@ struct ConformanceTests {
             diagnostics: [
                 DiagnosticSpec(
                     message: "'Foo' already declares a conformance to 'CustomStringConvertible'; @Describable cannot synthesize a conformance that already exists",
-                    line: 2,
+                    line: 3,
                     column: 23,
                     fixIts: [FixItSpec(message: "remove 'CustomStringConvertible' conformance")]
                 ),
@@ -26,7 +27,8 @@ struct ConformanceTests {
             conformances: ["LocalizedError"],
             applyFixIts: ["remove 'CustomStringConvertible' conformance"],
             fixedSource: """
-            @Describable("Foo")
+            @Describable
+            @Description("Foo")
             struct Foo: Hashable {
             }
             """
@@ -36,7 +38,8 @@ struct ConformanceTests {
     @Test func onlyExplicitCustomStringConvertibleRemovesClause() {
         assertExpansion(
             """
-            @Describable("Foo")
+            @Describable
+            @Description("Foo")
             struct Foo: CustomStringConvertible {
             }
             """,
@@ -47,7 +50,7 @@ struct ConformanceTests {
             diagnostics: [
                 DiagnosticSpec(
                     message: "'Foo' already declares a conformance to 'CustomStringConvertible'; @Describable cannot synthesize a conformance that already exists",
-                    line: 2,
+                    line: 3,
                     column: 13,
                     fixIts: [FixItSpec(message: "remove 'CustomStringConvertible' conformance")]
                 ),
@@ -55,7 +58,8 @@ struct ConformanceTests {
             conformances: ["LocalizedError"],
             applyFixIts: ["remove 'CustomStringConvertible' conformance"],
             fixedSource: """
-            @Describable("Foo")
+            @Describable
+            @Description("Foo")
             struct Foo {
             }
             """
@@ -65,7 +69,8 @@ struct ConformanceTests {
     @Test func manualDescription() {
         assertExpansion(
             """
-            @Describable("Foo")
+            @Describable
+            @Description("Foo")
             struct Foo {
                 var description: String { "manual" }
             }
@@ -78,7 +83,7 @@ struct ConformanceTests {
             diagnostics: [
                 DiagnosticSpec(
                     message: "'description' is already implemented; @Describable cannot synthesize 'CustomStringConvertible' for a type that implements it manually",
-                    line: 3,
+                    line: 4,
                     column: 5
                 ),
             ]
@@ -88,7 +93,8 @@ struct ConformanceTests {
     @Test func manualErrorDescription() {
         assertExpansion(
             """
-            @Describable("Foo")
+            @Describable
+            @Description("Foo")
             struct Foo: Error {
                 var errorDescription: String? { "manual" }
             }
@@ -101,7 +107,7 @@ struct ConformanceTests {
             diagnostics: [
                 DiagnosticSpec(
                     message: "'errorDescription' is already implemented; @Describable cannot synthesize 'LocalizedError' for a type that implements it manually",
-                    line: 3,
+                    line: 4,
                     column: 5
                 ),
             ]
@@ -111,7 +117,8 @@ struct ConformanceTests {
     @Test func errorDescriptionOnNonErrorTypeIsUnrelated() {
         assertExpansion(
             """
-            @Describable("Foo")
+            @Describable
+            @Description("Foo")
             struct Foo {
                 var errorDescription: String? { nil }
             }
@@ -197,7 +204,8 @@ struct ConformanceTests {
     @Test func conformanceInheritedFromSuperclass() {
         assertExpansion(
             """
-            @Describable("View({id})")
+            @Describable
+            @Description("View({id})")
             final class View: NSObject {
                 let id: Int
             }
@@ -209,7 +217,7 @@ struct ConformanceTests {
             """,
             diagnostics: [
                 DiagnosticSpec(
-                    message: "'View' already conforms to 'CustomStringConvertible' through a superclass or an extension; @Describable cannot synthesize a conformance that already exists",
+                    message: "'View' already conforms to 'CustomStringConvertible' through a superclass or an extension; remove that conformance so @Describable can synthesize it",
                     line: 1,
                     column: 1
                 ),
@@ -221,7 +229,8 @@ struct ConformanceTests {
     @Test func localizedErrorFromExtension() {
         assertExpansion(
             """
-            @Describable("Failure")
+            @Describable
+            @Description("Failure")
             struct Failure: Error {}
 
             extension Failure: LocalizedError {}
@@ -233,7 +242,7 @@ struct ConformanceTests {
             """,
             diagnostics: [
                 DiagnosticSpec(
-                    message: "'Failure' already conforms to 'LocalizedError' through a superclass or an extension; @Describable cannot synthesize a conformance that already exists",
+                    message: "'Failure' already conforms to 'LocalizedError' through a superclass or an extension; remove that conformance so @Describable can synthesize it",
                     line: 1,
                     column: 1
                 ),
@@ -245,7 +254,8 @@ struct ConformanceTests {
     @Test func nonErrorTypesIgnoreLocalizedErrorAvailability() {
         assertExpansion(
             """
-            @Describable("Foo")
+            @Describable
+            @Description("Foo")
             struct Foo {}
             """,
             expandedSource: """

@@ -23,7 +23,8 @@ enum ReadmeComparison {
     case mismatch(String, String)
 }
 
-@Describable("Connection(host: {host}, port: {port})")
+@Describable
+@Description("Connection(host: {host}, port: {port})")
 final class Connection {
     let host: String
     let port: Int
@@ -34,10 +35,9 @@ final class Connection {
     }
 }
 
-@Describable(
-    "HTTPError(code: {code}, endpoint: {endpoint})",
-    error: "The request failed with HTTP {code}."
-)
+@Describable
+@Description("HTTPError(code: {code}, endpoint: {endpoint})")
+@Description(.error, "The request failed with HTTP {code}.")
 struct ReadmeHTTPError: Error {
     let code: Int
     let endpoint: URL
@@ -45,10 +45,11 @@ struct ReadmeHTTPError: Error {
 
 @Describable
 enum APIError: Error {
-    @Description("invalidStatus(code: {code})", error: "The server returned HTTP {code}.")
+    @Description("invalidStatus(code: {code})")
+    @Description(.error, "The server returned HTTP {code}.")
     case invalidStatus(code: Int)
 
-    @Description(error: "The request timed out after {0} seconds.")
+    @Description(.error, "The request timed out after {0} seconds.")
     case timeout(Int)
 
     case unavailable

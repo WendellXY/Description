@@ -11,26 +11,31 @@ enum NetworkError: Error {
 
 @Describable
 enum HTTPStatusError: Error {
-    @Description("invalidStatus(code: {code})", error: "The server returned HTTP {code}.")
+    @Description("invalidStatus(code: {code})")
+    @Description(.error, "The server returned HTTP {code}.")
     case invalidStatus(code: Int)
 
-    @Description(error: "Timed out after {0}s.")
+    @Description(.error, "Timed out after {0}s.")
     case timeout(Int)
 
     case unavailable
 }
 
-@Describable("HTTPError(code: {code})", error: "HTTP request failed with code {code}.")
+@Describable
+@Description("HTTPError(code: {code})")
+@Description(.error, "HTTP request failed with code {code}.")
 struct HTTPError: Error {
     let code: Int
 }
 
-@Describable("PlainError(code: {code})")
+@Describable
+@Description("PlainError(code: {code})")
 public struct PlainError: Swift.Error {
     let code: Int
 }
 
-@Describable("ValidationError(field: {field})")
+@Describable
+@Description("ValidationError(field: {field})")
 final class ValidationError: Error {
     let field: String
 

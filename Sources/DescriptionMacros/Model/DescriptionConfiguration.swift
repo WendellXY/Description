@@ -24,21 +24,30 @@ struct TemplateSource {
     }
 }
 
-/// The templates configured for a type or for a single enum case.
-struct DescriptionConfiguration {
-    /// The `description` template, if one was given and is valid.
-    let description: TemplateSource?
-    /// Whether a description argument was written, even an invalid one.
-    let hasDescriptionArgument: Bool
-    /// The `errorDescription` template, if one was given.
-    let errorDescription: TemplateSource?
-    /// The `error:` argument, kept for diagnostics.
-    let errorArgument: LabeledExprSyntax?
+/// One `@Description` attribute: the target it configures and its template.
+struct DescriptionTemplate {
+    let target: DescriptionTarget
+    /// `nil` when the template was written but is invalid; it has already
+    /// been diagnosed, and the target still counts as configured.
+    let source: TemplateSource?
+    let attribute: AttributeSyntax
+    /// The target argument, when one was written, for diagnostics.
+    let targetArgument: ExprSyntax?
+}
 
-    static let empty = DescriptionConfiguration(
-        description: nil,
-        hasDescriptionArgument: false,
-        errorDescription: nil,
-        errorArgument: nil
-    )
+/// The `@Description` attributes attached to one declaration (a type or an
+/// enum case), at most one per target.
+struct DescriptionTemplates {
+    let templates: [DescriptionTemplate]
+
+    static let empty = DescriptionTemplates(templates: [])
+
+    subscript(target: DescriptionTarget) -> DescriptionTemplate? {
+        templates.first { $0.target == target }
+    }
+
+    /// Whether a template, valid or not, was written for `target`.
+    func configures(_ target: DescriptionTarget) -> Bool {
+        self[target] != nil
+    }
 }

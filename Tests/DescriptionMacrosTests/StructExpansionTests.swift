@@ -6,7 +6,8 @@ struct StructExpansionTests {
     @Test func multipleProperties() {
         assertExpansion(
             """
-            @Describable("User(id: {id}, name: {name})")
+            @Describable
+            @Description("User(id: {id}, name: {name})")
             struct User {
                 let id: UUID
                 let name: String
@@ -30,7 +31,8 @@ struct StructExpansionTests {
     @Test func computedObservedAndKeywordProperties() {
         assertExpansion(
             """
-            @Describable("{total} {count} {default}")
+            @Describable
+            @Description("{total} {count} {default}")
             struct Counter {
                 var count: Int { didSet {} }
                 var total: Int { count * 2 }
@@ -56,7 +58,8 @@ struct StructExpansionTests {
     @Test func optionalsUseStringDescribing() {
         assertExpansion(
             """
-            @Describable("{a} {b} {c} {d}")
+            @Describable
+            @Description("{a} {b} {c} {d}")
             struct Values {
                 let a: Int?
                 let b: Int!
@@ -84,7 +87,8 @@ struct StructExpansionTests {
     @Test func genericStruct() {
         assertExpansion(
             """
-            @Describable("Box(value: {value})")
+            @Describable
+            @Description("Box(value: {value})")
             struct Box<T> {
                 let value: T
             }
@@ -107,7 +111,8 @@ struct StructExpansionTests {
     func accessLevels(modifier: String, generated: String) {
         assertExpansion(
             """
-            @Describable("x")
+            @Describable
+            @Description("x")
             \(modifier) struct Value {
             }
             """,
@@ -127,7 +132,8 @@ struct StructExpansionTests {
     @Test func tuplePatternsAndConditionalProperties() {
         assertExpansion(
             """
-            @Describable("{a},{b},{c}")
+            @Describable
+            @Description("{a},{b},{c}")
             struct Values {
                 let (a, b): (Int, Int)
                 #if DEBUG
@@ -170,7 +176,7 @@ struct StructExpansionTests {
                     message: "@Describable requires a description template when applied to a struct",
                     line: 1,
                     column: 1,
-                    fixIts: [FixItSpec(message: "add template \"User(id: {id})\"")]
+                    fixIts: [FixItSpec(message: "add @Description(\"User(id: {id})\")")]
                 ),
             ]
         )
@@ -179,7 +185,8 @@ struct StructExpansionTests {
     @Test func unknownProperty() {
         assertExpansion(
             """
-            @Describable("User({nmae})")
+            @Describable
+            @Description("User({nmae})")
             struct User {
                 let id: UUID
                 let name: String
@@ -196,7 +203,7 @@ struct StructExpansionTests {
             diagnostics: [
                 DiagnosticSpec(
                     message: "unknown description field 'nmae'; available fields: {id}, {name}",
-                    line: 1,
+                    line: 2,
                     column: 20,
                     fixIts: [FixItSpec(message: "replace '{nmae}' with '{name}'")]
                 ),
@@ -207,7 +214,8 @@ struct StructExpansionTests {
     @Test func noProperties() {
         assertExpansion(
             """
-            @Describable("{x}")
+            @Describable
+            @Description("{x}")
             struct Empty {}
             """,
             expandedSource: """
@@ -216,7 +224,7 @@ struct StructExpansionTests {
             diagnostics: [
                 DiagnosticSpec(
                     message: "unknown description field 'x'; struct 'Empty' has no fields that can be used in a description",
-                    line: 1,
+                    line: 2,
                     column: 15
                 ),
             ]
@@ -226,7 +234,8 @@ struct StructExpansionTests {
     @Test func staticProperty() {
         assertExpansion(
             """
-            @Describable("{shared}")
+            @Describable
+            @Description("{shared}")
             struct Config {
                 static let shared = Config()
             }
@@ -239,7 +248,7 @@ struct StructExpansionTests {
             diagnostics: [
                 DiagnosticSpec(
                     message: "'{shared}' refers to a static property; only instance properties can be used in a description",
-                    line: 1,
+                    line: 2,
                     column: 15
                 ),
             ]
@@ -249,7 +258,8 @@ struct StructExpansionTests {
     @Test func positionalPlaceholder() {
         assertExpansion(
             """
-            @Describable("{0}")
+            @Describable
+            @Description("{0}")
             struct Pair {
                 let first: Int
             }
@@ -262,7 +272,7 @@ struct StructExpansionTests {
             diagnostics: [
                 DiagnosticSpec(
                     message: "positional description field '{0}' is only available for enum associated values; refer to the properties of struct 'Pair' by name",
-                    line: 1,
+                    line: 2,
                     column: 15
                 ),
             ]

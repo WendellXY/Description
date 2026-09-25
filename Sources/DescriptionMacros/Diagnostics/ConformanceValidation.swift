@@ -1,41 +1,42 @@
 import SwiftDiagnostics
 import SwiftSyntax
 
-/// Rejects types that already provide what `@Describable` would synthesize,
-/// so user-written behavior is never silently duplicated or overridden.
+/// Rejects types that already provide what `@Describable` would generate, so
+/// user-written behavior is never silently duplicated or overridden.
 enum ConformanceValidation {
-    static let customStringConvertible = "CustomStringConvertible"
-    static let localizedError = "LocalizedError"
-
     /// - Parameter protocols: The conformances the compiler asked the
     ///   extension macro to add; protocols the type already conforms to
     ///   (through a superclass or an extension) are missing from it.
-    static func validate(_ request: ExpansionRequest, protocols: [TypeSyntax], log: inout DiagnosticLog) {
+    static func validate(
+        _ request: ExpansionRequest,
+        targets: [DescriptionTarget],
+        protocols: [TypeSyntax],
+        log: inout DiagnosticLog
+    ) {
         let model = request.model
         let properties = PropertyModel.properties(in: request.memberBlock)
-        let missing = Set([customStringConvertible, localizedError]).subtracting(protocols.map(\.lastComponentName))
-
-        let describedExplicitly = checkExplicitConformance(customStringConvertible, in: model, log: &log)
-            || checkExistingMember("description", of: customStringConvertible, in: properties, log: &log)
-        if !describedExplicitly, missing.contains(customStringConvertible) {
-            log.report(.inheritedConformance(typeName: model.name, protocolName: customStringConvertible), at: request.attribute)
-        }
-
-        let localizedExplicitly = checkExplicitLocalizedError(in: model, log: &log)
-        guard model.conformsToError else { return }
-        let errorDescribedExplicitly = localizedExplicitly
-            || checkExistingMember("errorDescription", of: localizedError, in: properties, log: &log)
-        if !errorDescribedExplicitly, missing.contains(localizedError) {
-            log.report(.inheritedConformance(typeName: model.name, protocolName: localizedError), at: request.attribute)
+        let offered = Set(protocols.map(\.lastComponentName))
+        let localizedErrorDeclared = checkExplicitLocalizedError(in: model, log: &log)
+        for target in targets {
+            let declared = target == .error
+                ? localizedErrorDeclared
+                : checkExplicitConformance(of: target, in: model, log: &log)
+            let implemented = checkExistingMember(of: target, in: properties, log: &log)
+            guard !declared, !implemented, let protocolName = target.protocolName, !offered.contains(protocolName) else {
+                continue
+            }
+            log.report(.inheritedConformance(typeName: model.name, protocolName: protocolName), at: request.attribute)
         }
     }
 
     private static func checkExplicitConformance(
-        _ protocolName: String,
+        of target: DescriptionTarget,
         in model: DeclarationModel,
         log: inout DiagnosticLog
     ) -> Bool {
-        guard let inherited = model.inheritedType(named: protocolName), let clause = model.inheritanceClause else {
+        guard let protocolName = target.protocolName,
+              let inherited = model.inheritedType(named: protocolName),
+              let clause = model.inheritanceClause else {
             return false
         }
         log.report(
@@ -49,26 +50,27 @@ enum ConformanceValidation {
     /// `LocalizedError` is synthesized from `Error`, so an explicit
     /// `LocalizedError` should be spelled `Error` instead.
     private static func checkExplicitLocalizedError(in model: DeclarationModel, log: inout DiagnosticLog) -> Bool {
-        guard let inherited = model.inheritedType(named: localizedError), let clause = model.inheritanceClause else {
+        guard let protocolName = DescriptionTarget.error.protocolName,
+              let inherited = model.inheritedType(named: protocolName),
+              let clause = model.inheritanceClause else {
             return false
         }
         let fixIt = model.conformsToError
-            ? FixIts.removeInheritedType(inherited, from: clause, message: .removeConformance(localizedError))
+            ? FixIts.removeInheritedType(inherited, from: clause, message: .removeConformance(protocolName))
             : FixIts.replaceInheritedType(inherited, with: "Error")
         log.report(.explicitLocalizedError, at: inherited, fixIts: [fixIt])
         return true
     }
 
     private static func checkExistingMember(
-        _ name: String,
-        of protocolName: String,
+        of target: DescriptionTarget,
         in properties: [PropertyModel],
         log: inout DiagnosticLog
     ) -> Bool {
-        guard let property = properties.first(where: { $0.name == name && !$0.isStatic }) else {
+        guard let property = properties.first(where: { $0.name == target.propertyName && !$0.isStatic }) else {
             return false
         }
-        log.report(.existingMember(name: name, protocolName: protocolName), at: property.declaration)
+        log.report(.existingMember(name: target.propertyName, protocolName: target.protocolName), at: property.declaration)
         return true
     }
 }

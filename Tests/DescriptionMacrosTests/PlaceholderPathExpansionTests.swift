@@ -44,7 +44,8 @@ struct PlaceholderPathExpansionTests {
     @Test func escapedStringDefaultInOrdinaryLiteral() {
         assertExpansion(
             #"""
-            @Describable("Game(id: {config.gameId ?? \"nil\"})")
+            @Describable
+            @Description("Game(id: {config.gameId ?? \"nil\"})")
             struct Game {
                 let config: GameConfig
             }
@@ -99,7 +100,8 @@ struct PlaceholderPathExpansionTests {
     @Test func actorIsolationIsCheckedOnTheRoot() {
         assertExpansion(
             """
-            @Describable("{jobs.count}")
+            @Describable
+            @Description("{jobs.count}")
             actor Worker {
                 var jobs: [Int]
             }
@@ -112,12 +114,12 @@ struct PlaceholderPathExpansionTests {
             diagnostics: [
                 DiagnosticSpec(
                     message: "'{jobs}' refers to actor-isolated state and cannot be used in a synchronous description",
-                    line: 1,
+                    line: 2,
                     column: 15,
                     notes: [
                         NoteSpec(
                             message: "'jobs' is isolated to the actor; only 'nonisolated' properties and 'let' constants can be read synchronously",
-                            line: 3,
+                            line: 4,
                             column: 5
                         ),
                     ]

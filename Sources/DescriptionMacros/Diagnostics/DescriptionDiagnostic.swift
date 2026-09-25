@@ -15,15 +15,14 @@ enum DescriptionDiagnostic: DiagnosticMessage {
     case staticField(name: String)
     case actorIsolatedField(name: String)
     case missingTemplate(DeclarationKind)
-    case templateOnEnum
+    case invalidTarget
     case errorTemplateRequiresError
-    case duplicateConfiguration
+    case duplicateConfiguration(target: DescriptionTarget)
     case explicitConformance(typeName: String, protocolName: String)
     case explicitLocalizedError
-    case existingMember(name: String, protocolName: String)
+    case existingMember(name: String, protocolName: String?)
     case inheritedConformance(typeName: String, protocolName: String)
-    case emptyDescriptionAttribute
-    case descriptionOutsideEnumCase
+    case descriptionMisplaced
     case descriptionWithoutDescribable
 
     var severity: DiagnosticSeverity {
@@ -59,26 +58,28 @@ enum DescriptionDiagnostic: DiagnosticMessage {
             "'{\(name)}' refers to actor-isolated state and cannot be used in a synchronous description"
         case let .missingTemplate(kind):
             "@Describable requires a description template when applied to \(kind.article) \(kind.rawValue)"
-        case .templateOnEnum:
-            "@Describable does not accept templates when applied to an enum; annotate individual cases with @Description instead"
+        case .invalidTarget:
+            "description target must be .description, .error, .debug, .property(\"name\"), or a string literal naming a property"
         case .errorTemplateRequiresError:
-            "'error' is only available for types conforming to Error"
-        case .duplicateConfiguration:
-            "description is already configured for this declaration"
+            "'.error' is only available for types conforming to Error"
+        case let .duplicateConfiguration(target):
+            target == .description
+                ? "description is already configured for this declaration"
+                : "'\(target.spelling)' description is already configured for this declaration"
         case let .explicitConformance(typeName, protocolName):
             "'\(typeName)' already declares a conformance to '\(protocolName)'; @Describable cannot synthesize a conformance that already exists"
         case .explicitLocalizedError:
             "@Describable synthesizes 'LocalizedError' for types that conform to 'Error'; declare 'Error' instead"
-        case let .existingMember(name, protocolName):
+        case let .existingMember(name, protocolName?):
             "'\(name)' is already implemented; @Describable cannot synthesize '\(protocolName)' for a type that implements it manually"
+        case let .existingMember(name, nil):
+            "'\(name)' is already implemented; @Describable cannot generate it"
         case let .inheritedConformance(typeName, protocolName):
-            "'\(typeName)' already conforms to '\(protocolName)' through a superclass or an extension; @Describable cannot synthesize a conformance that already exists"
-        case .emptyDescriptionAttribute:
-            "@Description requires a description template, an 'error' template, or both"
-        case .descriptionOutsideEnumCase:
-            "@Description can only be applied to enum cases"
+            "'\(typeName)' already conforms to '\(protocolName)' through a superclass or an extension; remove that conformance so @Describable can synthesize it"
+        case .descriptionMisplaced:
+            "@Description can only be applied to enum, struct, class, or actor declarations and enum cases"
         case .descriptionWithoutDescribable:
-            "@Description has no effect unless the enclosing enum is annotated with @Describable"
+            "@Description has no effect unless the type is annotated with @Describable"
         }
     }
 
@@ -99,15 +100,14 @@ enum DescriptionDiagnostic: DiagnosticMessage {
         case .staticField: "staticField"
         case .actorIsolatedField: "actorIsolatedField"
         case .missingTemplate: "missingTemplate"
-        case .templateOnEnum: "templateOnEnum"
+        case .invalidTarget: "invalidTarget"
         case .errorTemplateRequiresError: "errorTemplateRequiresError"
         case .duplicateConfiguration: "duplicateConfiguration"
         case .explicitConformance: "explicitConformance"
         case .explicitLocalizedError: "explicitLocalizedError"
         case .existingMember: "existingMember"
         case .inheritedConformance: "inheritedConformance"
-        case .emptyDescriptionAttribute: "emptyDescriptionAttribute"
-        case .descriptionOutsideEnumCase: "descriptionOutsideEnumCase"
+        case .descriptionMisplaced: "descriptionMisplaced"
         case .descriptionWithoutDescribable: "descriptionWithoutDescribable"
         }
     }

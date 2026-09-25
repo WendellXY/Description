@@ -1,67 +1,97 @@
 import Foundation
 
-/// Synthesizes a `CustomStringConvertible` conformance for an enum, struct,
-/// class, or actor.
+/// Enables synthesized descriptions for an enum, struct, class, or actor.
 ///
-/// Enum cases are described by their case name unless a case is annotated
-/// with ``Description(_:error:)``. Structs, classes, and actors require a
-/// template whose `{name}` placeholders refer to instance properties declared
-/// on the type:
+/// `@Describable` only switches synthesis on; the text comes from
+/// ``Description(_:)`` attributes on the type and, for enums, on its cases:
 ///
 /// ```swift
-/// @Describable("User(id: {id}, name: {name})")
+/// @Describable
+/// @Description("User(id: {id}, name: {name})")
 /// struct User {
 ///     let id: Int
 ///     let name: String
 /// }
 /// ```
 ///
-/// When the annotated declaration lists `Error` in its inheritance clause,
-/// the macro additionally synthesizes `LocalizedError`. `errorDescription`
-/// uses the `error:` template when one is provided and falls back to
-/// `description` otherwise.
+/// By default the macro generates `CustomStringConvertible`, and additionally
+/// `LocalizedError` when the declaration lists `Error` in its inheritance
+/// clause. Every target that has a `@Description` is generated too, such as
+/// `.debug` or a custom property.
 ///
-/// - Parameters:
-///   - description: A template for `description`. Required for structs,
-///     classes, and actors; not accepted for enums.
-///   - error: A template for `errorDescription`. Only available for types that
-///     explicitly conform to `Error`.
+/// - Parameter generating: The targets to generate instead of the defaults,
+///   e.g. `[.debug]` for a type that should only be
+///   `CustomDebugStringConvertible`.
 @attached(
     extension,
-    conformances: CustomStringConvertible, LocalizedError,
-    names: named(description), named(errorDescription)
+    conformances: CustomStringConvertible, CustomDebugStringConvertible, LocalizedError,
+    names: named(description), named(debugDescription), named(errorDescription), arbitrary
 )
 @attached(peer)
 public macro Describable(
-    _ description: String? = nil,
-    error: String? = nil
+    generating: Set<DescriptionTarget> = []
 ) = #externalMacro(module: "DescriptionMacros", type: "DescribableMacro")
 
-/// Configures how a single enum case is described by ``Describable(_:error:)``.
+/// The main text of a type or enum case: `description`, and the fallback for
+/// every other target without its own text.
 ///
-/// Placeholders refer to the case's associated values, either by label
-/// (`{code}`) or by position (`{0}`). Use `{{` and `}}` for literal braces.
+/// Placeholders refer to properties declared in the type's body, or to an enum
+/// case's associated values by label (`{code}`) or position (`{0}`). They may
+/// use member paths (`{info.id}`), optional chaining (`{user?.name}`), a
+/// literal default (`{user?.name ?? "anonymous"}`), and presence checks
+/// (`{user?}`, rendering `true` or `false`). Use `{{` and `}}` for literal
+/// braces.
+@attached(peer)
+public macro Description(
+    _ template: String
+) = #externalMacro(module: "DescriptionMacros", type: "DescriptionMacro")
+
+/// The text of one target, such as `.error`, `.debug`, or a custom property:
 ///
 /// ```swift
 /// @Describable
-/// enum RequestState {
-///     case idle
-///
-///     @Description("Loading {url}")
-///     case loading(url: URL)
+/// enum LoadError: Error {
+///     @Description("loadFailed({0})")
+///     @Description(.error, "Could not load {0}.")
+///     @Description("analyticsName", "load_failed")
+///     case loadFailed(URL)
 /// }
 /// ```
-///
-/// - Parameters:
-///   - description: A template for the case's `description`. Defaults to the
-///     case name.
-///   - error: A template for the case's `errorDescription`. Only available
-///     when the enclosing enum explicitly conforms to `Error`.
 @attached(peer)
 public macro Description(
-    _ description: String? = nil,
-    error: String? = nil
+    _ target: DescriptionTarget,
+    _ template: String
 ) = #externalMacro(module: "DescriptionMacros", type: "DescriptionMacro")
+
+/// A `String` property that `@Describable` generates.
+///
+/// Use a string literal, or ``property(_:)``, to generate a property of your
+/// own, for example one required by your own protocol. Declare that protocol
+/// on the type yourself; the macro supplies the property.
+public struct DescriptionTarget: Hashable, Sendable, ExpressibleByStringLiteral {
+    /// The property's name.
+    public let name: String
+
+    /// `description`, from `CustomStringConvertible`.
+    public static let description = DescriptionTarget(name: "description")
+    /// `errorDescription`, from `LocalizedError`.
+    public static let error = DescriptionTarget(name: "errorDescription")
+    /// `debugDescription`, from `CustomDebugStringConvertible`.
+    public static let debug = DescriptionTarget(name: "debugDescription")
+
+    /// A property of your own named `name`.
+    public static func property(_ name: String) -> DescriptionTarget {
+        DescriptionTarget(name: name)
+    }
+
+    public init(stringLiteral name: String) {
+        self.init(name: name)
+    }
+
+    private init(name: String) {
+        self.name = name
+    }
+}
 
 /// `LocalizedError`, re-exposed so that code generated by `@Describable` can
 /// name the protocol in files that do not import Foundation themselves.

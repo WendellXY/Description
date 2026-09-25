@@ -179,30 +179,6 @@ struct EnumDiagnosticsTests {
         )
     }
 
-    @Test func templateOnEnumIsRejected() {
-        assertExpansion(
-            """
-            @Describable("State")
-            enum State {
-                case idle
-            }
-            """,
-            expandedSource: """
-            enum State {
-                case idle
-            }
-            """,
-            diagnostics: [
-                DiagnosticSpec(
-                    message: "@Describable does not accept templates when applied to an enum; annotate individual cases with @Description instead",
-                    line: 1,
-                    column: 14,
-                    fixIts: [FixItSpec(message: "remove the template arguments")]
-                ),
-            ]
-        )
-    }
-
     @Test func duplicateDescription() {
         assertExpansion(
             """
@@ -229,25 +205,6 @@ struct EnumDiagnosticsTests {
         )
     }
 
-    @Test func descriptionWithoutArguments() {
-        assertExpansion(
-            """
-            enum State {
-                @Description
-                case idle
-            }
-            """,
-            expandedSource: """
-            enum State {
-                case idle
-            }
-            """,
-            diagnostics: [
-                DiagnosticSpec(message: "@Description requires a description template, an 'error' template, or both", line: 2, column: 5),
-            ]
-        )
-    }
-
     @Test func descriptionOutsideEnumCase() {
         assertExpansion(
             """
@@ -262,7 +219,7 @@ struct EnumDiagnosticsTests {
             }
             """,
             diagnostics: [
-                DiagnosticSpec(message: "@Description can only be applied to enum cases", line: 2, column: 5),
+                DiagnosticSpec(message: "@Description can only be applied to enum, struct, class, or actor declarations and enum cases", line: 2, column: 5),
             ]
         )
     }
@@ -282,7 +239,7 @@ struct EnumDiagnosticsTests {
             """,
             diagnostics: [
                 DiagnosticSpec(
-                    message: "@Description has no effect unless the enclosing enum is annotated with @Describable",
+                    message: "@Description has no effect unless the type is annotated with @Describable",
                     line: 2,
                     column: 5,
                     severity: .warning

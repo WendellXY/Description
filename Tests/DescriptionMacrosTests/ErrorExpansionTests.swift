@@ -44,13 +44,11 @@ struct ErrorExpansionTests {
             """
             @Describable
             enum HTTPError: Swift.Error {
-                @Description(
-                    "invalidStatus(code: {code})",
-                    error: "The server returned HTTP {code}."
-                )
+                @Description("invalidStatus(code: {code})")
+                @Description(.error, "The server returned HTTP {code}.")
                 case invalidStatus(code: Int)
 
-                @Description(error: "HTTP request failed with code {0}.")
+                @Description(.error, "HTTP request failed with code {0}.")
                 case failed(Int)
 
                 case unavailable
@@ -94,10 +92,9 @@ struct ErrorExpansionTests {
     @Test func structWithErrorTemplate() {
         assertExpansion(
             """
-            @Describable(
-                "HTTPError(code: {code}, endpoint: {endpoint})",
-                error: "The request failed with HTTP {code}."
-            )
+            @Describable
+            @Description("HTTPError(code: {code}, endpoint: {endpoint})")
+            @Description(.error, "The request failed with HTTP {code}.")
             public struct HTTPError: Error {
                 let code: Int
                 let endpoint: URL
@@ -125,7 +122,8 @@ struct ErrorExpansionTests {
     @Test func structErrorWithoutErrorTemplate() {
         assertExpansion(
             """
-            @Describable("HTTPError(code: {code})")
+            @Describable
+            @Description("HTTPError(code: {code})")
             struct HTTPError: Error {
                 let code: Int
             }
@@ -180,10 +178,9 @@ struct ErrorExpansionTests {
     @Test func errorTemplateOnNonErrorStruct() {
         assertExpansion(
             """
-            @Describable(
-                "User(name: {name})",
-                error: "Invalid user"
-            )
+            @Describable
+            @Description("User(name: {name})")
+            @Description(.error, "Invalid user")
             struct User {
                 let name: String
             }
@@ -195,13 +192,13 @@ struct ErrorExpansionTests {
             """,
             diagnostics: [
                 DiagnosticSpec(
-                    message: "'error' is only available for types conforming to Error",
+                    message: "'.error' is only available for types conforming to Error",
                     line: 3,
-                    column: 5,
+                    column: 14,
                     notes: [
                         NoteSpec(
                             message: "@Describable only detects 'Error' in the inheritance clause of 'User'; conformances declared in extensions are not detected",
-                            line: 5,
+                            line: 4,
                             column: 8
                         ),
                     ],
@@ -216,7 +213,7 @@ struct ErrorExpansionTests {
             """
             @Describable
             enum State {
-                @Description(error: "Something failed")
+                @Description(.error, "Something failed")
                 case idle
             }
             """,
@@ -227,7 +224,7 @@ struct ErrorExpansionTests {
             """,
             diagnostics: [
                 DiagnosticSpec(
-                    message: "'error' is only available for types conforming to Error",
+                    message: "'.error' is only available for types conforming to Error",
                     line: 3,
                     column: 18,
                     notes: [
@@ -246,7 +243,8 @@ struct ErrorExpansionTests {
     @Test func errorOnlyTemplateStillRequiresDescriptionForStructs() {
         assertExpansion(
             """
-            @Describable(error: "failed")
+            @Describable
+            @Description(.error, "failed")
             struct Failure: Error {}
             """,
             expandedSource: """
@@ -257,7 +255,7 @@ struct ErrorExpansionTests {
                     message: "@Describable requires a description template when applied to a struct",
                     line: 1,
                     column: 1,
-                    fixIts: [FixItSpec(message: "add template \"Failure()\"")]
+                    fixIts: [FixItSpec(message: "add @Description(\"Failure()\")")]
                 ),
             ]
         )
@@ -268,7 +266,7 @@ struct ErrorExpansionTests {
             """
             @Describable
             enum Failure: Error {
-                @Description(error: "code {cdoe}")
+                @Description(.error, "code {cdoe}")
                 case status(code: Int)
             }
             """,
@@ -281,7 +279,7 @@ struct ErrorExpansionTests {
                 DiagnosticSpec(
                     message: "unknown description field 'cdoe'; available fields: {code}",
                     line: 3,
-                    column: 31,
+                    column: 32,
                     fixIts: [FixItSpec(message: "replace '{cdoe}' with '{code}'")]
                 ),
             ]

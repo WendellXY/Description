@@ -6,7 +6,7 @@ import Testing
 
 /// The conformances the compiler passes to `@Describable` for a type that
 /// does not conform to either protocol yet.
-let defaultConformances: [TypeSyntax] = ["CustomStringConvertible", "LocalizedError"]
+let defaultConformances: [TypeSyntax] = ["CustomStringConvertible", "CustomDebugStringConvertible", "LocalizedError"]
 
 /// `assertMacroExpansion` reporting failures through swift-testing.
 func assertExpansion(

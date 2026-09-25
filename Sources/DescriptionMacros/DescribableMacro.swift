@@ -3,8 +3,9 @@ import SwiftSyntax
 import SwiftSyntaxBuilder
 import SwiftSyntaxMacros
 
-/// `@Describable`: synthesizes `CustomStringConvertible` for enums, structs,
-/// classes, and actors.
+/// `@Describable`: enables synthesis of `description`, `errorDescription`,
+/// `debugDescription`, and custom properties for enums, structs, classes, and
+/// actors. The text comes from `@Description` attributes.
 public enum DescribableMacro: ExtensionMacro, PeerMacro {
     public static func expansion(
         of node: AttributeSyntax,
@@ -15,15 +16,19 @@ public enum DescribableMacro: ExtensionMacro, PeerMacro {
     ) throws -> [ExtensionDeclSyntax] {
         var log = DiagnosticLog()
         let request = expansionRequest(of: node, attachedTo: declaration, in: context, log: &log)
-        request.map { ConformanceValidation.validate($0, protocols: protocols, log: &log) }
-        let members = request.flatMap { generatedMembers(for: $0, log: &log) }
+        let generated = request.map { generatedMembers(for: $0, log: &log) }
+        if let request, let generated {
+            ConformanceValidation.validate(request, targets: generated.targets, protocols: protocols, log: &log)
+        }
         log.emit(in: context)
-        guard let request, let members, !log.hasErrors else {
+        guard let generated, !log.hasErrors else {
             return []
         }
+        let conformances = generated.targets.compactMap(\.conformance)
+        let conformanceClause = conformances.isEmpty ? "" : ": " + conformances.joined(separator: ", ")
         let extensionDecl: DeclSyntax = """
-            extension \(type.trimmed): \(raw: request.model.synthesizedConformances.joined(separator: ", ")) {
-            \(raw: members.joined(separator: "\n\n"))
+            extension \(type.trimmed)\(raw: conformanceClause) {
+            \(raw: generated.members.joined(separator: "\n\n"))
             }
             """
         return extensionDecl.as(ExtensionDeclSyntax.self).map { [$0] } ?? []
@@ -59,16 +64,18 @@ public enum DescribableMacro: ExtensionMacro, PeerMacro {
             attribute: node,
             model: DeclarationModel(kind: kind, declaration: declaration, lexicalContext: context.lexicalContext),
             memberBlock: declaration.memberBlock,
-            configuration: AttributeArguments.configuration(of: node, log: &log)
+            typeAttributes: declaration.attributes,
+            typeTemplates: AttributeArguments.templates(in: declaration.attributes, log: &log),
+            generating: AttributeArguments.generatedTargets(of: node, log: &log)?.map { (target: $0.0, argument: $0.1) }
         )
     }
 
-    private static func generatedMembers(for request: ExpansionRequest, log: inout DiagnosticLog) -> [String]? {
+    private static func generatedMembers(for request: ExpansionRequest, log: inout DiagnosticLog) -> GeneratedMembers {
         switch request.model.kind {
         case .enum:
-            return EnumExpansion.members(for: request, log: &log)
+            EnumExpansion.members(for: request, log: &log)
         case .struct, .class, .actor:
-            return NominalExpansion.members(for: request, log: &log)
+            NominalExpansion.members(for: request, log: &log)
         }
     }
 }

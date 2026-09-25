@@ -6,7 +6,8 @@ struct ActorExpansionTests {
     @Test func nonisolatedAndConstantProperties() {
         assertExpansion(
             """
-            @Describable("Worker(id: {id}, name: {name}, label: {label})")
+            @Describable
+            @Description("Worker(id: {id}, name: {name}, label: {label})")
             public actor Worker {
                 nonisolated let id: UUID
                 let name: String
@@ -34,7 +35,9 @@ struct ActorExpansionTests {
     @Test func errorActorMembersAreNonisolated() {
         assertExpansion(
             """
-            @Describable("Failure({code})", error: "Failed with {code}")
+            @Describable
+            @Description("Failure({code})")
+            @Description(.error, "Failed with {code}")
             actor Failure: Error {
                 let code: Int
             }
@@ -60,7 +63,8 @@ struct ActorExpansionTests {
     @Test func isolatedMutablePropertyIsRejected() {
         assertExpansion(
             """
-            @Describable("Worker(jobs: {jobs})")
+            @Describable
+            @Description("Worker(jobs: {jobs})")
             actor Worker {
                 var jobs: [Job]
             }
@@ -73,12 +77,12 @@ struct ActorExpansionTests {
             diagnostics: [
                 DiagnosticSpec(
                     message: "'{jobs}' refers to actor-isolated state and cannot be used in a synchronous description",
-                    line: 1,
+                    line: 2,
                     column: 28,
                     notes: [
                         NoteSpec(
                             message: "'jobs' is isolated to the actor; only 'nonisolated' properties and 'let' constants can be read synchronously",
-                            line: 3,
+                            line: 4,
                             column: 5
                         ),
                     ]
@@ -90,7 +94,8 @@ struct ActorExpansionTests {
     @Test func isolatedComputedPropertyIsRejected() {
         assertExpansion(
             """
-            @Describable("{count}")
+            @Describable
+            @Description("{count}")
             actor Counter {
                 var count: Int { 0 }
             }
@@ -103,12 +108,12 @@ struct ActorExpansionTests {
             diagnostics: [
                 DiagnosticSpec(
                     message: "'{count}' refers to actor-isolated state and cannot be used in a synchronous description",
-                    line: 1,
+                    line: 2,
                     column: 15,
                     notes: [
                         NoteSpec(
                             message: "'count' is isolated to the actor; only 'nonisolated' properties and 'let' constants can be read synchronously",
-                            line: 3,
+                            line: 4,
                             column: 5
                         ),
                     ]
@@ -131,7 +136,7 @@ struct ActorExpansionTests {
                     message: "@Describable requires a description template when applied to an actor",
                     line: 1,
                     column: 1,
-                    fixIts: [FixItSpec(message: "add template \"Worker()\"")]
+                    fixIts: [FixItSpec(message: "add @Description(\"Worker()\")")]
                 ),
             ]
         )

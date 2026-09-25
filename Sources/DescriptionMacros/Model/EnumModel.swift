@@ -13,6 +13,14 @@ indirect enum CaseTree<Case> {
     case enumCase(Case)
     case conditional([Clause])
 
+    /// Every case in the tree, in declaration order.
+    var cases: [Case] {
+        switch self {
+        case let .enumCase(value): [value]
+        case let .conditional(clauses): clauses.flatMap { $0.members.flatMap(\.cases) }
+        }
+    }
+
     /// Whether any case in the tree satisfies `predicate`.
     func contains(where predicate: (Case) -> Bool) -> Bool {
         switch self {
@@ -38,7 +46,7 @@ indirect enum CaseTree<Case> {
     }
 }
 
-/// A single enum case element together with its `@Description` configuration.
+/// A single enum case element together with its `@Description` templates.
 struct EnumCaseModel {
     let element: EnumCaseElementSyntax
     /// The case name without backticks, used as the default description.
@@ -46,9 +54,9 @@ struct EnumCaseModel {
     /// The case name as written, used in generated patterns.
     let patternName: String
     let associatedValues: [AssociatedValue]
-    let configuration: DescriptionConfiguration
+    let templates: DescriptionTemplates
 
-    init(element: EnumCaseElementSyntax, configuration: DescriptionConfiguration) {
+    init(element: EnumCaseElementSyntax, templates: DescriptionTemplates) {
         self.element = element
         self.name = element.name.trimmedIdentifierName
         self.patternName = element.name.trimmedDescription
@@ -57,12 +65,12 @@ struct EnumCaseModel {
             let label = name.flatMap { $0.tokenKind == .wildcard ? nil : $0.trimmedIdentifierName }
             return AssociatedValue(index: index, label: label, isOptional: parameter.type.isSpelledAsOptional)
         }
-        self.configuration = configuration
+        self.templates = templates
     }
 }
 
 enum EnumModel {
-    /// Collects the enum's cases and their `@Description` configurations.
+    /// Collects the enum's cases and their `@Description` templates.
     static func cases(in memberBlock: MemberBlockSyntax, log: inout DiagnosticLog) -> [CaseTree<EnumCaseModel>] {
         cases(in: memberBlock.members, log: &log)
     }
@@ -70,8 +78,8 @@ enum EnumModel {
     private static func cases(in members: MemberBlockItemListSyntax, log: inout DiagnosticLog) -> [CaseTree<EnumCaseModel>] {
         members.flatMap { member -> [CaseTree<EnumCaseModel>] in
             if let caseDecl = member.decl.as(EnumCaseDeclSyntax.self) {
-                let configuration = configuration(of: caseDecl, log: &log)
-                return caseDecl.elements.map { .enumCase(EnumCaseModel(element: $0, configuration: configuration)) }
+                let templates = AttributeArguments.templates(in: caseDecl.attributes, log: &log)
+                return caseDecl.elements.map { .enumCase(EnumCaseModel(element: $0, templates: templates)) }
             }
             if let ifConfig = member.decl.as(IfConfigDeclSyntax.self) {
                 return [.conditional(ifConfig.clauses.map { clause(from: $0, log: &log) })]
@@ -88,19 +96,5 @@ enum EnumModel {
             []
         }
         return CaseTree.Clause(directive: clause.poundKeyword.text + condition, members: members)
-    }
-
-    private static func configuration(of caseDecl: EnumCaseDeclSyntax, log: inout DiagnosticLog) -> DescriptionConfiguration {
-        let attributes = caseDecl.attributes.compactMap { element -> AttributeSyntax? in
-            guard case let .attribute(attribute) = element, attribute.isNamed("Description") else { return nil }
-            return attribute
-        }
-        guard let first = attributes.first else {
-            return .empty
-        }
-        for duplicate in attributes.dropFirst() {
-            log.report(.duplicateConfiguration, at: duplicate, fixIts: FixIts.removeAttribute(duplicate).map { [$0] } ?? [])
-        }
-        return AttributeArguments.configuration(of: first, log: &log)
     }
 }
