@@ -81,3 +81,56 @@ struct ReadmeExamplesTests {
         #expect(APIError.unavailable.errorDescription == "unavailable")
     }
 }
+
+// 0.2 README examples.
+
+struct ReadmeGameConfig { let gameId: String? }
+struct ReadmeGameState { let resumeGameData: [UInt8]? }
+struct ReadmeItem { let isActive: Bool }
+
+@Describable
+enum ReadmeRoute: Error {
+    @Description(#"webGame(gameId: {config.gameId ?? "nil"}, hasResumeData: {state.resumeGameData?})"#)
+    case webGame(config: ReadmeGameConfig, state: ReadmeGameState)
+
+    @Description(raw: #"cart(items: {items.filter { $0.isActive }.count}, total: {total.description})"#)
+    case cart(items: [ReadmeItem], total: Double)
+
+    @Description(.error, raw: #"{"game_info_lost".uppercased()}"#)
+    case gameInfoLost
+}
+
+@Describable(default: .member("title"))
+enum ReadmeTab {
+    case chat, home
+    var title: String { self == .chat ? "Chat" : "Home" }
+}
+
+protocol ReadmeAnalyticsNaming {
+    var analyticsName: String { get }
+}
+
+@Describable
+enum ReadmeScreen: ReadmeAnalyticsNaming {
+    @Description("analyticsName", "chat_room")
+    case chat(roomId: Int)
+    case home
+}
+
+@Suite("README 0.2 examples")
+struct ReadmeTargetExamplesTests {
+    @Test func placeholdersAndRawTemplates() {
+        let route = ReadmeRoute.webGame(config: .init(gameId: nil), state: .init(resumeGameData: []))
+        #expect(route.description == "webGame(gameId: nil, hasResumeData: true)")
+        let cart = ReadmeRoute.cart(items: [.init(isActive: true), .init(isActive: false)], total: 2.5)
+        #expect(cart.description == "cart(items: 1, total: 2.5)")
+        #expect(ReadmeRoute.gameInfoLost.errorDescription == "GAME_INFO_LOST")
+        #expect(ReadmeRoute.gameInfoLost.description == "gameInfoLost")
+    }
+
+    @Test func defaultsAndCustomProperties() {
+        #expect(ReadmeTab.chat.description == "Chat")
+        #expect(ReadmeScreen.chat(roomId: 1).analyticsName == "chat_room")
+        #expect(ReadmeScreen.home.analyticsName == "home")
+    }
+}

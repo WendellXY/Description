@@ -22,24 +22,26 @@ RequestState.idle.description             // "idle"
 RequestState.loaded(bytes: 42).description // "Received 42 bytes"
 ```
 
-`@Describable` generates an ordinary `CustomStringConvertible` conformance. When the
-type explicitly conforms to `Error`, it also generates `LocalizedError`. Placeholders
-are checked while the macro expands, so a typo is a compile error with a fix-it, not
-a wrong string at runtime.
-
-The whole API is two attributes:
+`@Describable` turns synthesis on; `@Description` supplies the text. The macro
+generates ordinary conformances: `CustomStringConvertible` by default, plus
+`LocalizedError` when the type explicitly conforms to `Error`, and on request
+`CustomDebugStringConvertible` or properties of your own. Placeholders are checked
+while the macro expands, so a typo is a compile error with a fix-it rather than a
+wrong string at runtime.
 
 | Attribute | Attach to | Purpose |
 | --- | --- | --- |
-| `@Describable(_ description: String? = nil, error: String? = nil)` | `enum`, `struct`, `class`, `actor` | Synthesizes the conformances |
-| `@Description(_ description: String? = nil, error: String? = nil)` | enum cases | Configures one case |
+| `@Describable(generating:default:)` | `enum`, `struct`, `class`, `actor` | Enables synthesis |
+| `@Description("…")` | the type, or enum cases | The main text (`description`) |
+| `@Description(target, "…")` | the type, or enum cases | Text for `.error`, `.debug`, or a custom property |
+| `@Description(raw: #"…"#)`, `@Description(target, raw: #"…"#)` | the type, or enum cases | Text with arbitrary Swift expressions |
 
 ## Installation
 
 Add the package to `Package.swift`:
 
 ```swift
-.package(url: "https://github.com/WendellXY/Description.git", from: "0.1.0"),
+.package(url: "https://github.com/WendellXY/Description.git", from: "0.2.0"),
 ```
 
 and depend on the `Description` product:
@@ -50,23 +52,50 @@ and depend on the `Description` product:
 
 Requires Swift 6.0 or later. The package accepts swift-syntax 600 through 604.
 
-## Template syntax
+## Templates
 
-Templates are ordinary string literals with a small placeholder DSL. They don't use
+Templates are string literals with a small placeholder language. They don't use
 Swift interpolation, because associated values aren't in scope inside an attribute.
 
 | Syntax | Meaning |
 | --- | --- |
-| `{name}` | A labeled associated value, or a property |
+| `{name}` | A labeled associated value, or a property declared in the type's body |
 | `{0}`, `{1}` | An associated value by position (enums only) |
+| `{info.redPacketId}` | A member path |
+| `{notify?.uid}` | Optional chaining |
+| `{notify?.uid ?? 0}` | A literal default: integer, float, string, `true`, `false`, or `nil` |
+| `{state.resumeData?}` | Presence: `true` when the value isn't `nil` |
 | `{{`, `}}` | A literal `{` or `}` |
 
-Escape sequences (`\n`, `\u{2022}`, …) and raw strings (`#"C:\{path}"#`) work as
-usual. v1 has no format specifiers (`{value:02X}`), member paths (`{user.name}`),
-or arbitrary expressions.
+The macro validates the first name of every placeholder, including a spelling fix-it
+and actor-isolation checks. Member names after it are checked by the compiler.
+Escape sequences (`\n`, `\u{2022}`, …) and raw strings work as usual; a raw string
+avoids escaping string defaults:
+
+```swift
+@Description(#"webGame(gameId: {config.gameId ?? "nil"}, hasResumeData: {state.resumeGameData?})"#)
+case webGame(config: GameConfig, state: GameState)
+```
 
 Values are interpolated with Swift's own string interpolation, so any type works,
 including generics and optionals, without extra constraints.
+
+### Raw templates
+
+When a placeholder needs more than a path, such as a call, an operator, or a closure, use
+`raw:`. Each `{…}` then holds any Swift expression, copied into the generated code:
+
+```swift
+@Description(raw: #"cart(items: {items.filter { $0.isActive }.count}, total: {total.formatted()})"#)
+case cart(items: [Item], total: Decimal)
+
+@Description(.error, raw: #"{String(localized: "game_info_lost", bundle: .module)}"#)
+case gameInfoLost
+```
+
+Expressions can use the type's members and, in enum cases, associated values by
+label, or `_0`, `_1`, … when unlabeled. The macro checks that each expression
+parses; everything else is up to the compiler.
 
 ## Enums
 
@@ -101,27 +130,51 @@ extension Comparison: CustomStringConvertible {
 }
 ```
 
-Cases inside `#if` blocks are mirrored in the generated `switch`.
+Cases inside `#if` blocks are mirrored in the generated `switch`. A `@Description`
+on the enum itself is the text for every case that has none of its own, and can
+use properties declared in the enum's body.
+
+### Raw values and other defaults
+
+`default:` chooses the text of cases without a `@Description`:
+
+```swift
+@Describable(default: .rawValue)
+enum PayErrorCode: Int, Error {
+    case timeout = 1016          // "1016"
+    @Description("cancelled")
+    case cancelled = 1           // "cancelled"
+}
+
+@Describable(default: .member("title"))
+enum Tab {
+    case chat, home
+    var title: String { ... }
+}
+```
 
 ## Structs, classes, and actors
 
-These types have no natural default, so they require a template. Placeholders
-refer to instance properties declared in the type's body.
+These types have no case names, so they need a `@Description` (or a
+`default: .member(…)`). Placeholders refer to properties declared in the type's body.
 
 ```swift
-@Describable("User(id: {id}, name: {name})")
+@Describable
+@Description("User(id: {id}, name: {name})")
 struct User {
     let id: UUID
     let name: String
 }
 
-@Describable("Connection(host: {host}, port: {port})")
+@Describable
+@Description("Connection(host: {host}, port: {port})")
 final class Connection {
     let host: String
     let port: Int
 }
 
-@Describable("Box(value: {value})")
+@Describable
+@Description("Box(value: {value})")
 struct Box<T> {
     let value: T
 }
@@ -129,50 +182,48 @@ struct Box<T> {
 
 ### Actors
 
-`description` must be synchronous, so the generated members are `nonisolated`.
-Placeholders may use `nonisolated` properties and stored `let` constants (the
-compiler still requires those to be `Sendable`). Other actor-isolated state is
-rejected:
+The generated members are `nonisolated`, because the protocol requirements are
+synchronous. Placeholders may use `nonisolated` properties and stored `let`
+constants (the compiler still requires those to be `Sendable`). Other
+actor-isolated state is rejected:
 
 ```swift
-@Describable("Worker(id: {id})")
+@Describable
+@Description("Worker(id: {id})")
 actor Worker {
     nonisolated let id: UUID
     var pendingJobs: Int
 }
 
-@Describable("Queue(jobs: {jobs})")
+@Describable
+@Description("Queue(jobs: {jobs})")
 // error: '{jobs}' refers to actor-isolated state and cannot be used in a synchronous description
 actor Queue {
     var jobs: [Job]
 }
 ```
 
-## Errors
+## Targets: errors, debug descriptions, and your own properties
 
-Error support needs no extra macro. If `Error` appears in the annotated type's
-inheritance clause, `@Describable` also synthesizes `LocalizedError`, so
-`localizedDescription` returns the description:
+`@Description(target, "…")` sets the text of one generated property. A target
+without its own text uses the main text.
+
+| Target | Generates |
+| --- | --- |
+| `.description` (the default) | `description`, `CustomStringConvertible` |
+| `.error` | `errorDescription`, `LocalizedError` |
+| `.debug` | `debugDescription`, `CustomDebugStringConvertible` |
+| `"name"` or `.property("name")` | `var name: String` |
+
+### Errors
+
+If `Error` appears in the type's inheritance clause, `@Describable` also synthesizes
+`LocalizedError`, so `localizedDescription` returns the error text:
 
 ```swift
 @Describable
-enum NetworkError: Error {
-    @Description("Request failed: {underlying}")
-    case requestFailed(underlying: any Error)
-
-    case unavailable
-}
-
-NetworkError.unavailable.errorDescription  // "unavailable"
-```
-
-When log output and user-facing text should differ, use `error:`:
-
-```swift
-@Describable(
-    "HTTPError(code: {code}, endpoint: {endpoint})",
-    error: "The request failed with HTTP {code}."
-)
+@Description("HTTPError(code: {code}, endpoint: {endpoint})")
+@Description(.error, "The request failed with HTTP {code}.")
 struct HTTPError: Error {
     let code: Int
     let endpoint: URL
@@ -180,18 +231,14 @@ struct HTTPError: Error {
 
 String(describing: HTTPError(code: 500, endpoint: url))  // "HTTPError(code: 500, endpoint: …)"
 HTTPError(code: 500, endpoint: url).localizedDescription  // "The request failed with HTTP 500."
-```
 
-Enum cases work the same way. A case may give only an `error:` template and keep
-its name as the description:
-
-```swift
 @Describable
 enum APIError: Error {
-    @Description("invalidStatus(code: {code})", error: "The server returned HTTP {code}.")
+    @Description("invalidStatus(code: {code})")
+    @Description(.error, "The server returned HTTP {code}.")
     case invalidStatus(code: Int)
 
-    @Description(error: "The request timed out after {0} seconds.")
+    @Description(.error, "The request timed out after {0} seconds.")
     case timeout(Int)
 
     case unavailable
@@ -199,11 +246,45 @@ enum APIError: Error {
 
 APIError.timeout(30).description       // "timeout"
 APIError.timeout(30).errorDescription  // "The request timed out after 30 seconds."
+APIError.unavailable.errorDescription  // "unavailable"
 ```
 
-Without `error:`, `errorDescription` is the same as `description`. Using `error:` on a
-type that doesn't conform to `Error` is a compile error, with a fix-it that adds the
-conformance.
+Using `.error` on a type that doesn't conform to `Error` is a compile error, with a
+fix-it that adds the conformance.
+
+### Debug descriptions
+
+A `.debug` template adds `CustomDebugStringConvertible`. To generate *only* the
+debug description, list the targets explicitly:
+
+```swift
+@Describable(generating: [.debug])
+enum TabIndex: Int {
+    @Description(.debug, "Main.MainTabBar.Tab.Chat") case chat
+    @Description(.debug, "Main.MainTabBar.Tab.Home") case home
+}
+
+String(reflecting: TabIndex.chat)  // "Main.MainTabBar.Tab.Chat"
+```
+
+### Your own properties
+
+Any other name generates a `String` property of that name, for example to satisfy
+a protocol of your own. Declare the protocol on the type yourself; the macro
+supplies the property.
+
+```swift
+protocol AnalyticsNaming {
+    var analyticsName: String { get }
+}
+
+@Describable
+enum Screen: AnalyticsNaming {
+    @Description("analyticsName", "chat_room")
+    case chat(roomId: Int)
+    case home                      // analyticsName == "home"
+}
+```
 
 ## Diagnostics
 
@@ -214,14 +295,16 @@ possible:
 | --- | --- | --- |
 | Misspelled field | `unknown description field 'resorce'; available fields: {resource}` | Replace with the closest match |
 | Positional index out of range | `description field '{2}' does not exist; case 'value' has 1 associated value` | |
+| Unsupported placeholder | `'{name.uppercased()}' is not supported in a description template; …` | |
 | Unbalanced brace | `unterminated description placeholder; use '{{' for a literal '{'` | Escape the brace |
-| Struct/class/actor without a template | `@Describable requires a description template when applied to a struct` | Insert a memberwise template |
-| Template on an enum | `@Describable does not accept templates when applied to an enum; …` | Remove the arguments |
-| `error:` on a non-error | `'error' is only available for types conforming to Error` | Add `Error` conformance |
+| Invalid raw expression | `'{name.}' is not a valid Swift expression` | |
+| Struct/class/actor without text | `@Describable requires a description template when applied to a struct` | Insert a memberwise `@Description` |
+| `.error` on a non-error | `'.error' is only available for types conforming to Error` | Add `Error` conformance |
 | Actor-isolated state | `'{jobs}' refers to actor-isolated state and cannot be used in a synchronous description` | |
-| Two `@Description`s on one case | `description is already configured for this declaration` | Remove the duplicate |
-| Existing `CustomStringConvertible` / `LocalizedError` | `'Foo' already declares a conformance to 'CustomStringConvertible'; …` | Remove it, or replace `LocalizedError` with `Error` |
-| Hand-written `description` / `errorDescription` | `'description' is already implemented; …` | |
+| Two templates for one target | `description is already configured for this declaration` | Remove the duplicate |
+| Existing conformance | `'Foo' already declares a conformance to 'CustomStringConvertible'; …` | Remove it, or replace `LocalizedError` with `Error` |
+| Conformance from a superclass or extension | `'Foo' already conforms to 'CustomStringConvertible' through a superclass or an extension; …` | |
+| Hand-written member | `'description' is already implemented; …` | |
 | Not a type | `@Describable can only be applied to enum, struct, class, or actor declarations` | |
 
 ## Limitations
@@ -234,17 +317,27 @@ which keeps it predictable but has consequences:
   refines `Error`, isn't detected. Move `Error` onto the declaration.
 - **Only properties declared in the type's body are visible.** Superclass members,
   protocol requirements, and properties added in extensions can't be used as
-  placeholders.
+  placeholders. Raw templates can use any member, because the compiler checks them.
 - **Existing conformances can't be replaced.** A class that already conforms to
   `CustomStringConvertible` through its superclass (for example, any `NSObject`
   subclass, or a subclass of another `@Describable` class) is rejected, because the
-  generated `description` can't override the inherited one.
+  generated `description` can't override the inherited one. The same applies to a
+  conformance declared in an extension elsewhere; remove it there.
 - **Templates must be single-line string literals** (raw strings are fine).
 - **Extension macros can't be attached to types declared inside functions.**
 - **Class-based errors on Linux before Swift 6.2:** Foundation crashes when
   `localizedDescription` is called on any class that conforms to `Error`, with or
   without `@Describable`. Read `errorDescription` directly, or use a struct or enum
   error.
+
+## Migrating from 0.1
+
+| 0.1 | 0.2 |
+| --- | --- |
+| `@Describable("User({id})")` | `@Describable` `@Description("User({id})")` |
+| `@Describable("…", error: "…")` | `@Describable` `@Description("…")` `@Description(.error, "…")` |
+| `@Description("…", error: "…")` on a case | `@Description("…")` `@Description(.error, "…")` |
+| `@Description(error: "…")` on a case | `@Description(.error, "…")` |
 
 ## License
 
