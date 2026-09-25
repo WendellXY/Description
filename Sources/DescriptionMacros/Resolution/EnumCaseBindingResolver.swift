@@ -24,8 +24,8 @@ struct EnumCaseBindingResolver {
             case let .expression(expression):
                 // Bind exactly the associated values the expression mentions,
                 // so unused bindings do not produce warnings.
-                let names = RawExpressionAnalysis.referencedNames(in: expression, of: source, log: &log) ?? []
-                let referenced = enumCase.associatedValues.filter { names.contains($0.referenceName) }
+                let references = RawExpressionAnalysis.references(in: expression, of: source, log: &log)
+                let referenced = enumCase.associatedValues.filter { references?.names.contains($0.referenceName) == true }
                 usedIndices.formUnion(referenced.map(\.index))
                 if expression.source.allSatisfy(\.isASCIIDigit) {
                     log.report(
@@ -34,7 +34,11 @@ struct EnumCaseBindingResolver {
                         position: source.position(ofUTF8Offset: expression.range.lowerBound)
                     )
                 }
-                return .interpolation(expression.source)
+                let isOptionalValue = referenced.contains { $0.isOptional && $0.referenceName == references?.soleName }
+                return .interpolation(Interpolation.expression(
+                    for: expression.source,
+                    isOptional: references?.isMemberAccess == true || isOptionalValue
+                ))
             case let .placeholder(placeholder):
                 guard let value = associatedValue(for: placeholder, in: source, log: &log) else {
                     return .literal("")

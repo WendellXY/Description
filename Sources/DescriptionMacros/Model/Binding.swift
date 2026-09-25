@@ -74,7 +74,10 @@ enum Interpolation {
         let path = root + placeholder.members.map { ($0.isOptionalChained ? "?." : ".") + $0.name }.joined()
         switch placeholder.form {
         case .value:
-            let isOptional = placeholder.members.isEmpty ? rootIsOptional : placeholder.hasOptionalChaining
+            // The type at the end of a member path is not visible to the
+            // macro, so paths are always described explicitly; the text is
+            // the same as plain interpolation, without the optional warning.
+            let isOptional = placeholder.members.isEmpty ? rootIsOptional : true
             return expression(for: path, isOptional: isOptional)
         case let .coalesced(defaultExpression):
             return "\(path) ?? \(defaultExpression)"

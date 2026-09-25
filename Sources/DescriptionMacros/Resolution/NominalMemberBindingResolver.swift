@@ -17,8 +17,12 @@ struct NominalMemberBindingResolver {
             case let .literal(text):
                 return .literal(text)
             case let .expression(expression):
-                _ = RawExpressionAnalysis.referencedNames(in: expression, of: source, log: &log)
-                return .interpolation(expression.source)
+                let references = RawExpressionAnalysis.references(in: expression, of: source, log: &log)
+                let isOptionalProperty = properties.contains { $0.isOptional && !$0.isStatic && $0.name == references?.soleName }
+                return .interpolation(Interpolation.expression(
+                    for: expression.source,
+                    isOptional: references?.isMemberAccess == true || isOptionalProperty
+                ))
             case let .placeholder(placeholder):
                 guard let property = property(for: placeholder, in: source, log: &log) else {
                     return .literal("")

@@ -29,7 +29,7 @@ struct PlaceholderPathExpansionTests {
                 var description: String {
                     switch self {
                     case let .grab(info, rewards):
-                        return "grab(id: \(info.redPacketId), count: \(rewards.count))"
+                        return "grab(id: \(String(describing: info.redPacketId)), count: \(String(describing: rewards.count)))"
                     case let .level(notify):
                         return "level(uid: \(notify?.uid ?? 0), name: \(String(describing: notify?.name)))"
                     case let .web(config, state):

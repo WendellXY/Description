@@ -56,7 +56,7 @@ struct RawTemplateTests {
                 var description: String {
                     switch self {
                     case let .web(config, items, _):
-                        return #"web(id: \#(config.gameId ?? "nil"), active: \#(items.filter { $0.isActive }.count))"#
+                        return #"web(id: \#(config.gameId ?? "nil"), active: \#(String(describing: items.filter { $0.isActive }.count)))"#
                     case .lost:
                         return "lost"
                     case let .named(_0):
@@ -67,7 +67,7 @@ struct RawTemplateTests {
                 var errorDescription: String? {
                     switch self {
                     case let .web(config, items, _):
-                        return #"web(id: \#(config.gameId ?? "nil"), active: \#(items.filter { $0.isActive }.count))"#
+                        return #"web(id: \#(config.gameId ?? "nil"), active: \#(String(describing: items.filter { $0.isActive }.count)))"#
                     case .lost:
                         return #"\#(String(localized: "game_lost", bundle: .module))"#
                     case let .named(_0):

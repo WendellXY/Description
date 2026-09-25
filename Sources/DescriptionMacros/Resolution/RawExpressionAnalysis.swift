@@ -1,16 +1,26 @@
 import SwiftParser
 import SwiftSyntax
 
+/// What a raw template expression refers to.
+struct RawExpressionReferences {
+    /// The free identifiers used (`a` and `b` in `a.count + b`, not `count`).
+    let names: Set<String>
+    /// The name, when the whole expression is a single identifier.
+    let soleName: String?
+    /// Whether the whole expression is a member access such as `a.b` or
+    /// `a?.b`, whose type the macro cannot see.
+    let isMemberAccess: Bool
+}
+
 /// Checks the expressions of raw templates and finds the names they use.
 enum RawExpressionAnalysis {
-    /// The free identifiers `expression` refers to (`a` and `b` in
-    /// `a.count + b`, but not `count`), or `nil` after reporting when it is
-    /// not a valid Swift expression.
-    static func referencedNames(
+    /// What `expression` refers to, or `nil` after reporting when it is not a
+    /// valid Swift expression.
+    static func references(
         in expression: RawExpression,
         of source: TemplateSource,
         log: inout DiagnosticLog
-    ) -> Set<String>? {
+    ) -> RawExpressionReferences? {
         var parser = Parser(expression.source)
         let syntax = ExprSyntax.parse(from: &parser)
         guard !syntax.hasError else {
@@ -23,7 +33,12 @@ enum RawExpressionAnalysis {
         }
         let collector = ReferenceCollector(viewMode: .sourceAccurate)
         collector.walk(syntax)
-        return collector.names
+        let soleName = syntax.as(DeclReferenceExprSyntax.self).map { $0.baseName.identifier?.name ?? $0.baseName.text }
+        return RawExpressionReferences(
+            names: collector.names,
+            soleName: soleName,
+            isMemberAccess: syntax.is(MemberAccessExprSyntax.self)
+        )
     }
 }
 
