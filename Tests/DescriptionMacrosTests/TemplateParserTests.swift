@@ -148,11 +148,15 @@ struct TemplateParserTests {
         }
     }
 
-    @Test func allErrorsAreReported() throws {
-        let failure = try #require(throws: TemplateParseFailure.self) {
-            try TemplateParser.parse("} {} {x")
+    @Test func allErrorsAreReported() {
+        // do/catch rather than `#require(throws:)` returning the error, which
+        // needs Swift 6.1.
+        do {
+            _ = try TemplateParser.parse("} {} {x")
+            Issue.record("Expected the template to fail to parse")
+        } catch {
+            #expect(error.errors.map(\.kind) == [.unmatchedClosingBrace, .emptyPlaceholder, .unterminatedPlaceholder])
         }
-        #expect(failure.errors.map(\.kind) == [.unmatchedClosingBrace, .emptyPlaceholder, .unterminatedPlaceholder])
     }
 
     @Test func bindingReferenceSpelling() {

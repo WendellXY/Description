@@ -74,10 +74,11 @@ struct ErrorDescriptionTests {
 
     @Test func thrownErrorsBridgeLocalizedDescription() {
         func fail() throws { throw HTTPStatusError.invalidStatus(code: 404) }
-        #expect {
+        do {
             try fail()
-        } throws: { error in
-            error.localizedDescription == "The server returned HTTP 404."
+            Issue.record("Expected fail() to throw")
+        } catch {
+            #expect(error.localizedDescription == "The server returned HTTP 404.")
         }
     }
 }
