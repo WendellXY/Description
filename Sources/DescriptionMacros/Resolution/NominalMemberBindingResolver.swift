@@ -21,7 +21,11 @@ struct NominalMemberBindingResolver {
                     return .literal("")
                 }
                 return .interpolation(
-                    Interpolation.expression(for: SwiftIdentifier.escaped(property.name), isOptional: property.isOptional)
+                    Interpolation.expression(
+                        for: placeholder,
+                        root: SwiftIdentifier.escaped(property.name),
+                        rootIsOptional: property.isOptional
+                    )
                 )
             }
         }

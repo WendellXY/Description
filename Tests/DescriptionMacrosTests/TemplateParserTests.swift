@@ -125,12 +125,17 @@ struct TemplateParserTests {
         }
     }
 
-    @Test func memberPathsAreRejected() {
-        #expect(throws: TemplateParseFailure(errors: [
-            TemplateSyntaxError(kind: .memberPath("user.name"), range: 0..<11),
-        ])) {
-            try TemplateParser.parse("{user.name}")
-        }
+    @Test func memberPathsAreParsed() throws {
+        let template = try TemplateParser.parse("id={info.redPacketId}")
+        #expect(template.placeholders == [
+            Placeholder(
+                reference: .named("info"),
+                members: [MemberAccess(name: "redPacketId", isOptionalChained: false)],
+                range: 3..<21,
+                rootLength: 4
+            ),
+        ])
+        #expect(template.placeholders.first?.rootRange == 4..<8)
     }
 
     @Test func formatSpecifiersAreRejected() {
@@ -141,7 +146,7 @@ struct TemplateParserTests {
         }
     }
 
-    @Test(arguments: ["{ name }", "{1a}", "{-1}", "{a b}", "{a.}"])
+    @Test(arguments: ["{ name }", "{1a}", "{-1}", "{a b}", "{a.}", "{a..b}", "{a?}?}", "{?}"])
     func invalidPlaceholders(text: String) {
         #expect(throws: TemplateParseFailure.self) {
             try TemplateParser.parse(text)

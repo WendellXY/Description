@@ -120,8 +120,10 @@ enum DescriptionDiagnostic: DiagnosticMessage {
             "unmatched '}' in description template; use '}}' for a literal '}'"
         case .emptyPlaceholder:
             "empty description placeholder; expected a field name or index"
-        case let .memberPath(path):
-            "member paths such as '{\(path)}' are not supported in description templates"
+        case let .unsupportedExpression(content):
+            "'{\(content)}' is not supported in a description template; placeholders may use member paths, '?.', '?? literal' and '{path?}', and raw templates accept any expression"
+        case let .invalidDefault(text):
+            "the default after '??' must be a literal such as 0, \"nil\", true or nil, not '\(text)'"
         case let .formatSpecifier(content):
             "format specifiers such as '{\(content)}' are not supported in description templates"
         case let .invalidPlaceholder(content):

@@ -26,7 +26,7 @@ struct EnumCaseBindingResolver {
                     return .literal("")
                 }
                 usedIndices.insert(value.index)
-                return .interpolation(Interpolation.expression(for: value.bindingName, isOptional: value.isOptional))
+                return .interpolation(Interpolation.expression(for: placeholder, root: value.bindingName, rootIsOptional: value.isOptional))
             }
         }
         return ResolvedCaseTemplate(

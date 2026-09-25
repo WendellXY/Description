@@ -19,12 +19,56 @@ extension BindingReference: CustomStringConvertible {
     }
 }
 
+/// One `.member` or `?.member` step of a placeholder path.
+struct MemberAccess: Equatable, Sendable {
+    let name: String
+    /// `?.member` rather than `.member`.
+    let isOptionalChained: Bool
+}
+
+/// How a placeholder's path is turned into interpolated text.
+enum PlaceholderForm: Equatable, Sendable {
+    /// `{path}`: the value itself.
+    case value
+    /// `{path ?? literal}`: the value, or a literal default when it is `nil`.
+    /// The payload is the default as a Swift expression, e.g. `0` or `"nil"`.
+    case coalesced(defaultExpression: String)
+    /// `{path?}`: whether the value is non-`nil`, rendered as `true`/`false`.
+    case presence
+}
+
 /// A placeholder occurrence inside a template.
 struct Placeholder: Equatable, Sendable {
+    /// The binding the path starts from.
     let reference: BindingReference
+    /// Member accesses applied to the binding, e.g. `.info.redPacketId`.
+    let members: [MemberAccess]
+    let form: PlaceholderForm
     /// UTF-8 offsets of the placeholder, braces included, within the raw
     /// template text.
     let range: Range<Int>
+    /// UTF-8 offsets of the root name or index within the raw template text.
+    let rootRange: Range<Int>
+
+    init(
+        reference: BindingReference,
+        members: [MemberAccess] = [],
+        form: PlaceholderForm = .value,
+        range: Range<Int>,
+        rootLength: Int? = nil
+    ) {
+        self.reference = reference
+        self.members = members
+        self.form = form
+        self.range = range
+        let length = rootLength ?? reference.description.utf8.count - 2
+        self.rootRange = (range.lowerBound + 1)..<(range.lowerBound + 1 + length)
+    }
+
+    /// Whether the path uses `?.`, making a plain value optional.
+    var hasOptionalChaining: Bool {
+        members.contains(where: \.isOptionalChained)
+    }
 }
 
 /// A piece of a parsed template.
@@ -57,10 +101,12 @@ struct TemplateSyntaxError: Error, Equatable, Sendable {
         case unmatchedClosingBrace
         /// `{}`.
         case emptyPlaceholder
-        /// `{user.name}`; member paths are not supported.
-        case memberPath(String)
         /// `{value:02X}`; format specifiers are not supported.
         case formatSpecifier(String)
+        /// `{a + b}` or `{name.uppercased()}`; only paths are supported.
+        case unsupportedExpression(String)
+        /// `{value ?? someVariable}`; defaults must be literals.
+        case invalidDefault(String)
         /// Anything else that is neither an identifier nor an index.
         case invalidPlaceholder(String)
     }

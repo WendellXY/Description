@@ -81,7 +81,7 @@ struct EnumDiagnosticsTests {
             """
             @Describable
             enum Value {
-                @Description("a } {b.c} {x:2} {")
+                @Description("a } {b.c()} {x:2} {")
                 case value(x: Int)
             }
             """,
@@ -97,12 +97,16 @@ struct EnumDiagnosticsTests {
                     column: 21,
                     fixIts: [FixItSpec(message: "use '}}' for a literal '}'")]
                 ),
-                DiagnosticSpec(message: "member paths such as '{b.c}' are not supported in description templates", line: 3, column: 23),
-                DiagnosticSpec(message: "format specifiers such as '{x:2}' are not supported in description templates", line: 3, column: 29),
+                DiagnosticSpec(
+                    message: "'{b.c()}' is not supported in a description template; placeholders may use member paths, '?.', '?? literal' and '{path?}', and raw templates accept any expression",
+                    line: 3,
+                    column: 23
+                ),
+                DiagnosticSpec(message: "format specifiers such as '{x:2}' are not supported in description templates", line: 3, column: 31),
                 DiagnosticSpec(
                     message: "unterminated description placeholder; use '{{' for a literal '{'",
                     line: 3,
-                    column: 35,
+                    column: 37,
                     fixIts: [FixItSpec(message: "use '{{' for a literal '{'")]
                 ),
             ]

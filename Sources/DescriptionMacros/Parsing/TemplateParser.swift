@@ -101,10 +101,16 @@ enum TemplateParser {
             }
             let range = index..<(close + 1)
             let content = String(decoding: bytes[(index + 1)..<close], as: UTF8.self)
-            switch Self.classify(content) {
-            case let .success(reference):
+            switch PlaceholderExpressionParser.parse(content, rawDelimiterLength: rawDelimiterLength) {
+            case let .success(parsed):
                 flushLiteral()
-                segments.append(.placeholder(Placeholder(reference: reference, range: range)))
+                segments.append(.placeholder(Placeholder(
+                    reference: parsed.reference,
+                    members: parsed.members,
+                    form: parsed.form,
+                    range: range,
+                    rootLength: parsed.rootLength
+                )))
             case let .failure(kind):
                 errors.append(TemplateSyntaxError(kind: kind, range: range))
             }
@@ -146,33 +152,5 @@ enum TemplateParser {
             literal = []
         }
 
-        private static func classify(_ content: String) -> Result<BindingReference, TemplateSyntaxError.Kind> {
-            if content.isEmpty {
-                return .failure(.emptyPlaceholder)
-            }
-            if content.allSatisfy(\.isASCIIDigit) {
-                guard let index = Int(content) else { return .failure(.invalidPlaceholder(content)) }
-                return .success(.positional(index))
-            }
-            if content.contains(":") {
-                return .failure(.formatSpecifier(content))
-            }
-            if content.contains("."), content.split(separator: ".", omittingEmptySubsequences: false).allSatisfy(isIdentifier) {
-                return .failure(.memberPath(content))
-            }
-            if isIdentifier(content) {
-                return .success(.named(content))
-            }
-            return .failure(.invalidPlaceholder(content))
-        }
-
-        private static func isIdentifier(_ text: some StringProtocol) -> Bool {
-            guard let first = text.first, first == "_" || first.isLetter else { return false }
-            return text.dropFirst().allSatisfy { $0 == "_" || $0.isLetter || $0.isNumber }
-        }
     }
-}
-
-private extension Character {
-    var isASCIIDigit: Bool { isASCII && isNumber }
 }

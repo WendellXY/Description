@@ -12,10 +12,11 @@ extension FixIts {
         guard let suggestion = SpellingSuggestion.closest(to: name, in: candidates) else {
             return []
         }
+        // Only the root is replaced, so member paths and defaults survive.
         let fixIt = replaceTemplateText(
-            placeholder.range,
+            placeholder.rootRange,
             in: source,
-            with: "{\(suggestion)}",
+            with: suggestion,
             message: .replaceField(original: "{\(name)}", replacement: "{\(suggestion)}")
         )
         return fixIt.map { [$0] } ?? []

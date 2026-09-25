@@ -61,6 +61,21 @@ enum Interpolation {
     static func expression(for name: String, isOptional: Bool) -> String {
         isOptional ? "String(describing: \(name))" : name
     }
+
+    /// The expression interpolated for `placeholder` once its root has been
+    /// resolved to `root`, e.g. `notify?.uid ?? 0` or `data != nil`.
+    static func expression(for placeholder: Placeholder, root: String, rootIsOptional: Bool) -> String {
+        let path = root + placeholder.members.map { ($0.isOptionalChained ? "?." : ".") + $0.name }.joined()
+        switch placeholder.form {
+        case .value:
+            let isOptional = placeholder.members.isEmpty ? rootIsOptional : placeholder.hasOptionalChaining
+            return expression(for: path, isOptional: isOptional)
+        case let .coalesced(defaultExpression):
+            return "\(path) ?? \(defaultExpression)"
+        case .presence:
+            return "\(path) != nil"
+        }
+    }
 }
 
 enum SwiftIdentifier {
