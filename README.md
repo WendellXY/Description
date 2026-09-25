@@ -32,6 +32,7 @@ wrong string at runtime.
 | Attribute | Attach to | Purpose |
 | --- | --- | --- |
 | `@Describable(generating:default:)` | `enum`, `struct`, `class`, `actor` | Enables synthesis |
+| `@DescribableProperties` | a `@Describable` type | Generates custom properties |
 | `@Description("…")` | the type, or enum cases | The main text (`description`) |
 | `@Description(target, "…")` | the type, or enum cases | Text for `.error`, `.debug`, or a custom property |
 | `@Description(raw: #"…"#)`, `@Description(target, raw: #"…"#)` | the type, or enum cases | Text with arbitrary Swift expressions |
@@ -41,7 +42,7 @@ wrong string at runtime.
 Add the package to `Package.swift`:
 
 ```swift
-.package(url: "https://github.com/WendellXY/Description.git", from: "0.2.0"),
+.package(url: "https://github.com/WendellXY/Description.git", from: "0.3.0"),
 ```
 
 and depend on the `Description` product:
@@ -270,8 +271,8 @@ String(reflecting: TabIndex.chat)  // "Main.MainTabBar.Tab.Chat"
 ### Your own properties
 
 Any other name generates a `String` property of that name, for example to satisfy
-a protocol of your own. Declare the protocol on the type yourself; the macro
-supplies the property.
+a protocol of your own. Declare the protocol on the type yourself, and add
+`@DescribableProperties`, which supplies the property:
 
 ```swift
 protocol AnalyticsNaming {
@@ -279,12 +280,20 @@ protocol AnalyticsNaming {
 }
 
 @Describable
+@DescribableProperties
 enum Screen: AnalyticsNaming {
     @Description("analyticsName", "chat_room")
     case chat(roomId: Int)
     case home                      // analyticsName == "home"
 }
 ```
+
+Custom properties need their own macro because their names are chosen by you, which
+requires the macro to declare arbitrary member names. Declaring those on
+`@Describable` itself trips a compiler bug on types whose `Equatable` conformance
+can't be synthesized, such as an enum with a closure payload and a hand-written
+`==`. Without `@DescribableProperties`, a custom target is a compile error with a
+fix-it that adds it.
 
 ## Diagnostics
 
@@ -301,6 +310,7 @@ possible:
 | Struct/class/actor without text | `@Describable requires a description template when applied to a struct` | Insert a memberwise `@Description` |
 | `.error` on a non-error | `'.error' is only available for types conforming to Error` | Add `Error` conformance |
 | Actor-isolated state | `'{jobs}' refers to actor-isolated state and cannot be used in a synchronous description` | |
+| Custom property without `@DescribableProperties` | `custom description property 'analyticsName' requires @DescribableProperties` | Add `@DescribableProperties` |
 | Two templates for one target | `description is already configured for this declaration` | Remove the duplicate |
 | Existing conformance | `'Foo' already declares a conformance to 'CustomStringConvertible'; …` | Remove it, or replace `LocalizedError` with `Error` |
 | Conformance from a superclass or extension | `'Foo' already conforms to 'CustomStringConvertible' through a superclass or an extension; …` | |
@@ -330,9 +340,14 @@ which keeps it predictable but has consequences:
   without `@Describable`. Read `errorDescription` directly, or use a struct or enum
   error.
 
-## Migrating from 0.1
+## Migrating
 
-| 0.1 | 0.2 |
+From 0.2 to 0.3, add `@DescribableProperties` to types that use custom properties
+(`@Description("name", …)` or `.property("name")`). Everything else is unchanged.
+
+From 0.1:
+
+| 0.1 | 0.2 and later |
 | --- | --- |
 | `@Describable("User({id})")` | `@Describable` `@Description("User({id})")` |
 | `@Describable("…", error: "…")` | `@Describable` `@Description("…")` `@Description(.error, "…")` |
