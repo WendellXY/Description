@@ -10,8 +10,9 @@ enum NominalExpansion {
         let texts = templates.templates.reduce(into: [DescriptionTarget: ResolvedTemplate]()) { texts, template in
             texts[template.target] = template.source.map { resolver.resolve($0, log: &log) }
         }
+        let mainText = texts[.description] ?? request.defaultSource.memberTemplate
         let needsMainText = targets.contains { $0 == .description || !templates.configures($0) }
-        if needsMainText, !templates.configures(.description) {
+        if needsMainText, !templates.configures(.description), request.defaultSource.memberTemplate == nil {
             log.report(
                 .missingTemplate(model.kind),
                 at: request.attribute,
@@ -28,7 +29,7 @@ enum NominalExpansion {
             } else if target != .description, targets.contains(.description) {
                 DescriptionGenerator.forwardingBody
             } else {
-                texts[.description]?.stringLiteral ?? "\"\""
+                mainText?.stringLiteral ?? "\"\""
             }
             return DescriptionGenerator.property(for: target, modifiers: modifiers, body: body)
         }

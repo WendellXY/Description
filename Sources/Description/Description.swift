@@ -19,9 +19,13 @@ import Foundation
 /// clause. Every target that has a `@Description` is generated too, such as
 /// `.debug` or a custom property.
 ///
-/// - Parameter generating: The targets to generate instead of the defaults,
-///   e.g. `[.debug]` for a type that should only be
-///   `CustomDebugStringConvertible`.
+/// - Parameters:
+///   - generating: The targets to generate instead of the defaults, e.g.
+///     `[.debug]` for a type that should only be
+///     `CustomDebugStringConvertible`.
+///   - default: Where the main text comes from when there is no untargeted
+///     `@Description`: the case name for enums, or a member such as
+///     `.rawValue`.
 @attached(
     extension,
     conformances: CustomStringConvertible, CustomDebugStringConvertible, LocalizedError,
@@ -29,7 +33,8 @@ import Foundation
 )
 @attached(peer)
 public macro Describable(
-    generating: Set<DescriptionTarget> = []
+    generating: Set<DescriptionTarget> = [],
+    default: DescriptionSource = .caseName
 ) = #externalMacro(module: "DescriptionMacros", type: "DescribableMacro")
 
 /// The main text of a type or enum case: `description`, and the fallback for
@@ -114,6 +119,35 @@ public struct DescriptionTarget: Hashable, Sendable, ExpressibleByStringLiteral 
 
     private init(name: String) {
         self.name = name
+    }
+}
+
+/// Where `@Describable` takes the main text from when a declaration has no
+/// untargeted `@Description`.
+///
+/// ```swift
+/// @Describable(default: .rawValue)
+/// enum PayErrorCode: Int, Error {
+///     case timeout = 1016   // description == "1016"
+/// }
+/// ```
+public struct DescriptionSource: Hashable, Sendable {
+    /// The member interpolated for each value, or `nil` for the case name.
+    public let memberName: String?
+
+    /// The enum case's name. The default for enums; structs, classes, and
+    /// actors need a template or a member instead.
+    public static let caseName = DescriptionSource(memberName: nil)
+    /// The raw value of a `RawRepresentable` type.
+    public static let rawValue = DescriptionSource(memberName: "rawValue")
+
+    /// A member of `self`, such as a computed `title` property.
+    public static func member(_ name: String) -> DescriptionSource {
+        DescriptionSource(memberName: name)
+    }
+
+    private init(memberName: String?) {
+        self.memberName = memberName
     }
 }
 

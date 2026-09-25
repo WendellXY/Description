@@ -75,7 +75,8 @@ public enum DescribableMacro: ExtensionMacro, PeerMacro {
             memberBlock: declaration.memberBlock,
             typeAttributes: declaration.attributes,
             typeTemplates: AttributeArguments.templates(in: declaration.attributes, log: &log),
-            generating: AttributeArguments.generatedTargets(of: node, log: &log)?.map { (target: $0.0, argument: $0.1) }
+            generating: AttributeArguments.generatedTargets(of: node, log: &log)?.map { (target: $0.0, argument: $0.1) },
+            defaultSource: AttributeArguments.defaultSource(of: node, log: &log)
         )
     }
 

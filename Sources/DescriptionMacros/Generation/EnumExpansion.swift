@@ -11,6 +11,8 @@ private struct CaseText {
     /// Whether the text is the case's main text, i.e. what `description`
     /// produces.
     let isMainText: Bool
+    /// Whether the text comes from `@Describable(default:)`.
+    var isDefault = false
 }
 
 /// Generates the members of an enum's `@Describable` extension.
@@ -39,7 +41,13 @@ enum EnumExpansion {
             DescriptionGenerator.property(
                 for: target,
                 modifiers: modifiers,
-                body: body(for: target, cases: resolvedTrees, typeTexts: typeTexts, forwards: targets.contains(.description))
+                body: body(
+                    for: target,
+                    cases: resolvedTrees,
+                    typeTexts: typeTexts,
+                    defaultSource: request.defaultSource,
+                    forwards: targets.contains(.description)
+                )
             )
         }
         return GeneratedMembers(targets: targets, members: members)
@@ -58,31 +66,39 @@ enum EnumExpansion {
         for target: DescriptionTarget,
         cases: [CaseTree<ResolvedEnumCase>],
         typeTexts: [DescriptionTarget: ResolvedTemplate],
+        defaultSource: DefaultSource,
         forwards: Bool
     ) -> String {
-        let usesMainTextOnly = !cases.contains { tree in
-            tree.contains { !text(for: target, of: $0, typeTexts: typeTexts).isMainText }
+        let text = { (resolved: ResolvedEnumCase) in
+            Self.text(for: target, of: resolved, typeTexts: typeTexts, defaultSource: defaultSource)
         }
+        let usesMainTextOnly = !cases.contains { tree in tree.contains { !text($0).isMainText } }
         if target != .description, forwards, usesMainTextOnly {
             return DescriptionGenerator.forwardingBody
+        }
+        // A member default shared by every case needs no switch.
+        if let shared = defaultSource.memberTemplate, !cases.contains(where: { tree in tree.contains { !text($0).isDefault } }) {
+            return shared.stringLiteral
         }
         return EnumSwitchGenerator.switchStatement(over: cases.map { tree in
             tree.map { resolved in
                 EnumSwitchArm(
                     patternName: resolved.enumCase.patternName,
                     associatedValues: resolved.enumCase.associatedValues,
-                    body: text(for: target, of: resolved, typeTexts: typeTexts).template
+                    body: text(resolved).template
                 )
             }
         })
     }
 
     /// The case's own template for `target`, else the type's, else the main
-    /// text: the case's untargeted template, the type's, or the case name.
+    /// text: the case's untargeted template, the type's, or the default
+    /// source (the case name unless `default:` says otherwise).
     private static func text(
         for target: DescriptionTarget,
         of resolved: ResolvedEnumCase,
-        typeTexts: [DescriptionTarget: ResolvedTemplate]
+        typeTexts: [DescriptionTarget: ResolvedTemplate],
+        defaultSource: DefaultSource
     ) -> CaseText {
         if target != .description {
             if let own = resolved.templates[target] {
@@ -97,6 +113,9 @@ enum EnumExpansion {
         }
         if let shared = typeTexts[.description] {
             return CaseText(template: ResolvedCaseTemplate(template: shared, usedIndices: []), isMainText: true)
+        }
+        if let member = defaultSource.memberTemplate {
+            return CaseText(template: ResolvedCaseTemplate(template: member, usedIndices: []), isMainText: true, isDefault: true)
         }
         return CaseText(template: EnumCaseBindingResolver(enumCase: resolved.enumCase).defaultTemplate, isMainText: true)
     }

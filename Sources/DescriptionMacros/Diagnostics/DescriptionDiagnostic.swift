@@ -26,6 +26,7 @@ enum DescriptionDiagnostic: DiagnosticMessage {
     case descriptionWithoutDescribable
     case invalidRawExpression(String)
     case rawPositionalLiteral(String)
+    case invalidDefaultSource
 
     var severity: DiagnosticSeverity {
         switch self {
@@ -84,6 +85,8 @@ enum DescriptionDiagnostic: DiagnosticMessage {
             "@Description has no effect unless the type is annotated with @Describable"
         case let .invalidRawExpression(source):
             "'{\(source)}' is not a valid Swift expression"
+        case .invalidDefaultSource:
+            "default must be .caseName, .rawValue, or .member(\"name\")"
         case let .rawPositionalLiteral(digits):
             "'{\(digits)}' in a raw template is the integer literal \(digits); unlabeled associated values are named _0, _1, and so on"
         }
@@ -117,6 +120,7 @@ enum DescriptionDiagnostic: DiagnosticMessage {
         case .descriptionWithoutDescribable: "descriptionWithoutDescribable"
         case .invalidRawExpression: "invalidRawExpression"
         case .rawPositionalLiteral: "rawPositionalLiteral"
+        case .invalidDefaultSource: "invalidDefaultSource"
         }
     }
 

@@ -13,6 +13,8 @@ struct ExpansionRequest {
     let typeTemplates: DescriptionTemplates
     /// `@Describable(generating: ...)`, or `nil` when absent.
     let generating: [(target: DescriptionTarget, argument: ExprSyntax)]?
+    /// `@Describable(default: ...)`.
+    let defaultSource: DefaultSource
 }
 
 /// The members generated for one `@Describable` use, and the targets they

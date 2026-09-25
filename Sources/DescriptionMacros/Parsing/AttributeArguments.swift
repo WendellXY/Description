@@ -88,6 +88,18 @@ enum AttributeArguments {
         }
     }
 
+    /// `@Describable(default: ...)`; `.caseName` when absent.
+    static func defaultSource(of attribute: AttributeSyntax, log: inout DiagnosticLog) -> DefaultSource {
+        guard let argument = attribute.argumentList.first(where: { $0.label?.text == "default" }) else {
+            return .caseName
+        }
+        guard let source = DefaultSource(argument.expression) else {
+            log.report(.invalidDefaultSource, at: argument.expression)
+            return .caseName
+        }
+        return source
+    }
+
     /// Parses a template argument.
     static func templateSource(from expression: ExprSyntax, mode: TemplateMode, log: inout DiagnosticLog) -> TemplateSource? {
         guard let literal = expression.as(StringLiteralExprSyntax.self) else {
