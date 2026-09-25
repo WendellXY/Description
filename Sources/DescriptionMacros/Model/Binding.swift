@@ -46,6 +46,12 @@ struct AssociatedValue: Equatable {
         label.map(SwiftIdentifier.escaped) ?? "_\(index)"
     }
 
+    /// The name raw template expressions use for the value: its label, or
+    /// `_0`, `_1`, ... for unlabeled values.
+    var referenceName: String {
+        label ?? "_\(index)"
+    }
+
     /// How the value is spelled in diagnostics.
     var placeholderSpelling: String {
         label.map { "{\($0)}" } ?? "{\(index)}"

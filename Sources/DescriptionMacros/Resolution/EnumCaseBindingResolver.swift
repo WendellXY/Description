@@ -21,6 +21,20 @@ struct EnumCaseBindingResolver {
             switch segment {
             case let .literal(text):
                 return .literal(text)
+            case let .expression(expression):
+                // Bind exactly the associated values the expression mentions,
+                // so unused bindings do not produce warnings.
+                let names = RawExpressionAnalysis.referencedNames(in: expression, of: source, log: &log) ?? []
+                let referenced = enumCase.associatedValues.filter { names.contains($0.referenceName) }
+                usedIndices.formUnion(referenced.map(\.index))
+                if expression.source.allSatisfy(\.isASCIIDigit) {
+                    log.report(
+                        .rawPositionalLiteral(expression.source),
+                        at: source.literal,
+                        position: source.position(ofUTF8Offset: expression.range.lowerBound)
+                    )
+                }
+                return .interpolation(expression.source)
             case let .placeholder(placeholder):
                 guard let value = associatedValue(for: placeholder, in: source, log: &log) else {
                     return .literal("")

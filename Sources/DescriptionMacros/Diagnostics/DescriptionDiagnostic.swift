@@ -24,10 +24,12 @@ enum DescriptionDiagnostic: DiagnosticMessage {
     case inheritedConformance(typeName: String, protocolName: String)
     case descriptionMisplaced
     case descriptionWithoutDescribable
+    case invalidRawExpression(String)
+    case rawPositionalLiteral(String)
 
     var severity: DiagnosticSeverity {
         switch self {
-        case .descriptionWithoutDescribable: .warning
+        case .descriptionWithoutDescribable, .rawPositionalLiteral: .warning
         default: .error
         }
     }
@@ -80,6 +82,10 @@ enum DescriptionDiagnostic: DiagnosticMessage {
             "@Description can only be applied to enum, struct, class, or actor declarations and enum cases"
         case .descriptionWithoutDescribable:
             "@Description has no effect unless the type is annotated with @Describable"
+        case let .invalidRawExpression(source):
+            "'{\(source)}' is not a valid Swift expression"
+        case let .rawPositionalLiteral(digits):
+            "'{\(digits)}' in a raw template is the integer literal \(digits); unlabeled associated values are named _0, _1, and so on"
         }
     }
 
@@ -109,6 +115,8 @@ enum DescriptionDiagnostic: DiagnosticMessage {
         case .inheritedConformance: "inheritedConformance"
         case .descriptionMisplaced: "descriptionMisplaced"
         case .descriptionWithoutDescribable: "descriptionWithoutDescribable"
+        case .invalidRawExpression: "invalidRawExpression"
+        case .rawPositionalLiteral: "rawPositionalLiteral"
         }
     }
 

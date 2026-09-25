@@ -25,21 +25,29 @@ enum AttributeArguments {
         return DescriptionTemplates(templates: unique.map(\.element))
     }
 
-    /// Reads `@Description(template)` or `@Description(target, template)`.
+    /// Reads `@Description([target,] template)` or
+    /// `@Description([target,] raw: template)`.
     private static func template(of attribute: AttributeSyntax, log: inout DiagnosticLog) -> DescriptionTemplate? {
         let arguments = attribute.argumentList
         let unlabeled = arguments.filter { $0.label == nil }.map(\.expression)
+        let rawArgument = arguments.first { $0.label?.text == "raw" }?.expression
         let targetArgument: ExprSyntax?
         let templateArgument: ExprSyntax
-        switch unlabeled.count {
-        case 1:
+        switch (unlabeled.count, rawArgument) {
+        case let (0, raw?):
+            targetArgument = nil
+            templateArgument = raw
+        case let (1, raw?):
+            targetArgument = unlabeled[0]
+            templateArgument = raw
+        case (1, nil):
             targetArgument = nil
             templateArgument = unlabeled[0]
-        case 2:
+        case (2, nil):
             targetArgument = unlabeled[0]
             templateArgument = unlabeled[1]
         default:
-            // Rejected by the type checker or by `@Description` itself.
+            // Rejected by the type checker.
             return nil
         }
         let target: DescriptionTarget
@@ -54,7 +62,7 @@ enum AttributeArguments {
         }
         return DescriptionTemplate(
             target: target,
-            source: templateSource(from: templateArgument, log: &log),
+            source: templateSource(from: templateArgument, mode: rawArgument == nil ? .checked : .raw, log: &log),
             attribute: attribute,
             targetArgument: targetArgument
         )
@@ -81,7 +89,7 @@ enum AttributeArguments {
     }
 
     /// Parses a template argument.
-    static func templateSource(from expression: ExprSyntax, log: inout DiagnosticLog) -> TemplateSource? {
+    static func templateSource(from expression: ExprSyntax, mode: TemplateMode, log: inout DiagnosticLog) -> TemplateSource? {
         guard let literal = expression.as(StringLiteralExprSyntax.self) else {
             log.report(.templateNotStringLiteral, at: expression)
             return nil
@@ -97,7 +105,7 @@ enum AttributeArguments {
         let rawText = literal.segments.compactMap { $0.as(StringSegmentSyntax.self)?.content.text }.joined()
         let rawDelimiterLength = literal.openingPounds?.text.count ?? 0
         do {
-            let template = try TemplateParser.parse(rawText, rawDelimiterLength: rawDelimiterLength)
+            let template = try TemplateParser.parse(rawText, rawDelimiterLength: rawDelimiterLength, mode: mode)
             return TemplateSource(template: template, literal: literal)
         } catch {
             let source = TemplateSource(template: Template(segments: []), literal: literal)

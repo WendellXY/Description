@@ -16,6 +16,9 @@ struct NominalMemberBindingResolver {
             switch segment {
             case let .literal(text):
                 return .literal(text)
+            case let .expression(expression):
+                _ = RawExpressionAnalysis.referencedNames(in: expression, of: source, log: &log)
+                return .interpolation(expression.source)
             case let .placeholder(placeholder):
                 guard let property = property(for: placeholder, in: source, log: &log) else {
                     return .literal("")

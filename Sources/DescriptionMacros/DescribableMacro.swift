@@ -7,6 +7,11 @@ import SwiftSyntaxMacros
 /// `debugDescription`, and custom properties for enums, structs, classes, and
 /// actors. The text comes from `@Description` attributes.
 public enum DescribableMacro: ExtensionMacro, PeerMacro {
+    /// Generated code is laid out by the macro itself. Automatic formatting
+    /// would also reformat expressions copied from raw templates, e.g.
+    /// turning `{ $0 }.count` into `{ $0 } .count`.
+    public static var formatMode: FormatMode { .disabled }
+
     public static func expansion(
         of node: AttributeSyntax,
         attachedTo declaration: some DeclGroupSyntax,
@@ -26,9 +31,13 @@ public enum DescribableMacro: ExtensionMacro, PeerMacro {
         }
         let conformances = generated.targets.compactMap(\.conformance)
         let conformanceClause = conformances.isEmpty ? "" : ": " + conformances.joined(separator: ", ")
+        let body = generated.members.joined(separator: "\n\n")
+            .split(separator: "\n", omittingEmptySubsequences: false)
+            .map { $0.isEmpty ? "" : "    \($0)" }
+            .joined(separator: "\n")
         let extensionDecl: DeclSyntax = """
             extension \(type.trimmed)\(raw: conformanceClause) {
-            \(raw: generated.members.joined(separator: "\n\n"))
+            \(raw: body)
             }
             """
         return extensionDecl.as(ExtensionDeclSyntax.self).map { [$0] } ?? []

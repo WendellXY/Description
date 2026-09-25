@@ -71,6 +71,25 @@ struct Placeholder: Equatable, Sendable {
     }
 }
 
+/// An expression from a raw template, copied into generated code as is.
+struct RawExpression: Equatable, Sendable {
+    /// The expression as Swift source, with the template literal's own
+    /// escaping (such as `\"` in an ordinary string literal) removed.
+    let source: String
+    /// UTF-8 offsets of the expression, braces included, within the raw
+    /// template text.
+    let range: Range<Int>
+}
+
+/// How a template's placeholders are interpreted.
+enum TemplateMode: Sendable {
+    /// `{path}` placeholders, validated by the macro.
+    case checked
+    /// `{expression}` placeholders holding any Swift expression, checked only
+    /// by the compiler.
+    case raw
+}
+
 /// A piece of a parsed template.
 enum Segment: Equatable, Sendable {
     /// Literal text in source form. Escape sequences are kept verbatim so the
@@ -79,6 +98,8 @@ enum Segment: Equatable, Sendable {
     /// collapsed to single braces.
     case literal(String)
     case placeholder(Placeholder)
+    /// `{...}` in a raw template: any Swift expression.
+    case expression(RawExpression)
 }
 
 /// A parsed description template such as `"User(id: {id})"`.

@@ -63,6 +63,30 @@ public macro Description(
     _ template: String
 ) = #externalMacro(module: "DescriptionMacros", type: "DescriptionMacro")
 
+/// Raw main text: each `{...}` holds any Swift expression, copied into the
+/// generated code. A raw string literal avoids escaping quotes:
+///
+/// ```swift
+/// @Description(raw: #"webGame(gameId: {config.gameId ?? "nil"}, count: {items.filter(\.isActive).count})"#)
+/// case webGame(config: GameConfig, items: [Item])
+/// ```
+///
+/// Expressions can use the type's members and, in enum cases, associated
+/// values by label, or `_0`, `_1`, ... when unlabeled. The macro checks that
+/// each expression parses; the compiler checks everything else.
+@attached(peer)
+public macro Description(
+    raw template: String
+) = #externalMacro(module: "DescriptionMacros", type: "DescriptionMacro")
+
+/// Raw text for one target, e.g.
+/// `@Description(.error, raw: #"{String(localized: "load_failed", bundle: .module)}"#)`.
+@attached(peer)
+public macro Description(
+    _ target: DescriptionTarget,
+    raw template: String
+) = #externalMacro(module: "DescriptionMacros", type: "DescriptionMacro")
+
 /// A `String` property that `@Describable` generates.
 ///
 /// Use a string literal, or ``property(_:)``, to generate a property of your
