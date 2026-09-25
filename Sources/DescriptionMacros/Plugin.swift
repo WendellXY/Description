@@ -5,6 +5,7 @@ import SwiftSyntaxMacros
 struct DescribablePlugin: CompilerPlugin {
     let providingMacros: [any Macro.Type] = [
         DescribableMacro.self,
+        DescribablePropertiesMacro.self,
         DescriptionMacro.self,
     ]
 }

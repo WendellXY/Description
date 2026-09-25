@@ -38,7 +38,7 @@ enum EnumExpansion {
         let resolvedTrees = caseTrees.map { tree in tree.map { resolve($0, log: &log) } }
         let modifiers = DescriptionGenerator.modifiers(for: model)
         let members = targets.map { target in
-            DescriptionGenerator.property(
+            (target, DescriptionGenerator.property(
                 for: target,
                 modifiers: modifiers,
                 body: body(
@@ -48,7 +48,7 @@ enum EnumExpansion {
                     defaultSource: request.defaultSource,
                     forwards: targets.contains(.description)
                 )
-            )
+            ))
         }
         return GeneratedMembers(targets: targets, members: members)
     }

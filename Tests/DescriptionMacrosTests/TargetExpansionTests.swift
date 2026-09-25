@@ -37,6 +37,7 @@ struct TargetExpansionTests {
         assertExpansion(
             """
             @Describable
+            @DescribableProperties
             enum LoadError: Error {
                 @Description("loadFailed({0})")
                 @Description(.error, "Could not load {0}.")
@@ -81,7 +82,9 @@ struct TargetExpansionTests {
                         return "cancelled"
                     }
                 }
+            }
 
+            extension LoadError {
                 var analyticsName: String {
                     switch self {
                     case .loadFailed:
@@ -195,6 +198,7 @@ struct TargetExpansionTests {
         assertExpansion(
             """
             @Describable(generating: [.property("analyticsName")])
+            @DescribableProperties
             @Description(.property("analyticsName"), "screen_{name}")
             actor Screen: AnalyticsNaming {
                 nonisolated let name: String
@@ -296,6 +300,7 @@ struct TargetExpansionTests {
         assertExpansion(
             """
             @Describable
+            @DescribableProperties
             @Description(.debug, "Box")
             @Description("analyticsName", "box")
             struct Box: CustomDebugStringConvertible {
@@ -316,13 +321,13 @@ struct TargetExpansionTests {
                 ),
                 DiagnosticSpec(
                     message: "'Box' already declares a conformance to 'CustomDebugStringConvertible'; @Describable cannot synthesize a conformance that already exists",
-                    line: 4,
+                    line: 5,
                     column: 13,
                     fixIts: [FixItSpec(message: "remove 'CustomDebugStringConvertible' conformance")]
                 ),
                 DiagnosticSpec(
                     message: "'analyticsName' is already implemented; @Describable cannot generate it",
-                    line: 5,
+                    line: 6,
                     column: 5
                 ),
             ],
@@ -368,6 +373,106 @@ struct TargetExpansionTests {
                     line: 1,
                     column: 1,
                     severity: .warning
+                ),
+            ]
+        )
+    }
+
+    @Test func customPropertiesRequireDescribableProperties() {
+        assertExpansion(
+            """
+            @Describable
+            @Description("Screen")
+            @Description("analyticsName", "screen")
+            struct Screen: AnalyticsNaming {}
+            """,
+            expandedSource: """
+            struct Screen: AnalyticsNaming {}
+            """,
+            diagnostics: [
+                DiagnosticSpec(
+                    message: "custom description property 'analyticsName' requires @DescribableProperties",
+                    line: 1,
+                    column: 1,
+                    fixIts: [FixItSpec(message: "add @DescribableProperties")]
+                ),
+            ],
+            applyFixIts: ["add @DescribableProperties"],
+            fixedSource: """
+            @Describable
+            @DescribableProperties
+            @Description("Screen")
+            @Description("analyticsName", "screen")
+            struct Screen: AnalyticsNaming {}
+            """
+        )
+    }
+
+    @Test func describablePropertiesAloneIsRejected() {
+        assertExpansion(
+            """
+            @DescribableProperties
+            struct Screen {}
+            """,
+            expandedSource: """
+            struct Screen {}
+            """,
+            diagnostics: [
+                DiagnosticSpec(message: "@DescribableProperties requires @Describable on the same type", line: 1, column: 1),
+            ]
+        )
+    }
+
+    @Test func describablePropertiesWithoutCustomTargetsWarns() {
+        assertExpansion(
+            """
+            @Describable
+            @DescribableProperties
+            @Description("Screen")
+            struct Screen {}
+            """,
+            expandedSource: """
+            struct Screen {}
+
+            extension Screen: CustomStringConvertible {
+                var description: String {
+                    "Screen"
+                }
+            }
+            """,
+            diagnostics: [
+                DiagnosticSpec(
+                    message: "@DescribableProperties has no effect without custom description properties such as @Description(\"name\", ...)",
+                    line: 2,
+                    column: 1,
+                    severity: .warning
+                ),
+            ]
+        )
+    }
+
+    @Test func templateErrorsAreReportedOnce() {
+        assertExpansion(
+            """
+            @Describable
+            @DescribableProperties
+            @Description("Screen({nmae})")
+            @Description("analyticsName", "screen")
+            struct Screen: AnalyticsNaming {
+                let name: String
+            }
+            """,
+            expandedSource: """
+            struct Screen: AnalyticsNaming {
+                let name: String
+            }
+            """,
+            diagnostics: [
+                DiagnosticSpec(
+                    message: "unknown description field 'nmae'; available fields: {name}",
+                    line: 3,
+                    column: 22,
+                    fixIts: [FixItSpec(message: "replace '{nmae}' with '{name}'")]
                 ),
             ]
         )

@@ -6,6 +6,7 @@ enum DescriptionFixItMessage: FixItMessage {
     case replaceField(original: String, replacement: String)
     case escapeBrace(String)
     case addTemplate(String)
+    case addAttribute(String)
     case addErrorConformance
     case removeDuplicateAttribute
     case removeConformance(String)
@@ -16,6 +17,7 @@ enum DescriptionFixItMessage: FixItMessage {
         case let .replaceField(original, replacement): "replace '\(original)' with '\(replacement)'"
         case let .escapeBrace(brace): "use '\(brace)\(brace)' for a literal '\(brace)'"
         case let .addTemplate(template): "add @Description(\"\(template)\")"
+        case let .addAttribute(attribute): "add \(attribute)"
         case .addErrorConformance: "add 'Error' conformance"
         case .removeDuplicateAttribute: "remove the duplicate @Description"
         case let .removeConformance(name): "remove '\(name)' conformance"
@@ -52,17 +54,29 @@ enum FixIts {
 
     /// Inserts `@Description("<template>")` on the line after `@Describable`.
     static func addDescriptionAttribute(_ template: String, afterDescribableIn list: AttributeListSyntax) -> FixIt? {
+        insert("@Description(\(literal: template))", afterDescribableIn: list, message: .addTemplate(template))
+    }
+
+    /// Inserts `attribute` (e.g. `@DescribableProperties`) after `@Describable`.
+    static func addAttribute(_ attribute: String, afterDescribableIn list: AttributeListSyntax) -> FixIt? {
+        insert(AttributeSyntax("\(raw: attribute)"), afterDescribableIn: list, message: .addAttribute(attribute))
+    }
+
+    private static func insert(
+        _ newAttribute: AttributeSyntax,
+        afterDescribableIn list: AttributeListSyntax,
+        message: DescriptionFixItMessage
+    ) -> FixIt? {
         guard let index = list.firstIndex(where: {
             $0.as(AttributeSyntax.self)?.isNamed(AttributeArguments.describableAttribute) == true
         }), let attribute = list[index].as(AttributeSyntax.self) else {
             return nil
         }
-        let newAttribute: AttributeSyntax = "@Description(\(literal: template))"
         let element = AttributeListSyntax.Element(newAttribute.with(\.leadingTrivia, .newline + attribute.leadingTrivia.indentation))
         var elements = Array(list)
         elements.insert(element, at: list.distance(from: list.startIndex, to: index) + 1)
         return FixIt(
-            message: DescriptionFixItMessage.addTemplate(template),
+            message: message,
             changes: [.replace(oldNode: Syntax(list), newNode: Syntax(AttributeListSyntax(elements)))]
         )
     }

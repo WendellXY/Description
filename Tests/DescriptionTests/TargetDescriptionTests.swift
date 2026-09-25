@@ -23,6 +23,7 @@ struct TargetUser {
 }
 
 @Describable
+@DescribableProperties
 enum LoadError: Error, AnalyticsNaming {
     @Description("loadFailed({0})")
     @Description(.error, "Could not load {0}.")
@@ -33,6 +34,7 @@ enum LoadError: Error, AnalyticsNaming {
 }
 
 @Describable
+@DescribableProperties
 @Description("Screen.chat")
 @Description(.property("analyticsName"), "chat_{roomName}")
 public struct ChatScreen: AnalyticsNaming {
@@ -67,5 +69,39 @@ struct TargetDescriptionTests {
         let screen: any AnalyticsNaming = ChatScreen(roomName: "lobby")
         #expect(screen.analyticsName == "chat_lobby")
         #expect(ChatScreen(roomName: "lobby").description == "Screen.chat")
+    }
+}
+
+// Regression test (reported from lama-ludo-ios on 0.2.0): with
+// `names: arbitrary` on @Describable, this enum failed to conform to
+// Equatable because the compiler counted the hand-written == twice.
+@Describable
+public enum WithClosure: Hashable, Sendable {
+    case moment(updatePageIndex: @Sendable (Int) -> Void)
+    @Description("detail(topicId: {topicId})")
+    case detail(topicId: Int64)
+
+    public static func == (lhs: WithClosure, rhs: WithClosure) -> Bool {
+        switch (lhs, rhs) {
+        case (.moment, .moment): true
+        case let (.detail(a), .detail(b)): a == b
+        default: false
+        }
+    }
+
+    public func hash(into hasher: inout Hasher) {
+        switch self {
+        case .moment: hasher.combine(0)
+        case let .detail(id): hasher.combine(id)
+        }
+    }
+}
+
+@Suite("Closure payloads")
+struct ClosurePayloadTests {
+    @Test func handWrittenEquatableStillWorks() {
+        #expect(WithClosure.detail(topicId: 1) == .detail(topicId: 1))
+        #expect(WithClosure.detail(topicId: 7).description == "detail(topicId: 7)")
+        #expect(WithClosure.moment(updatePageIndex: { _ in }).description == "moment")
     }
 }

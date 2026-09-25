@@ -27,6 +27,7 @@ func assertExpansion(
         diagnostics: diagnostics,
         macroSpecs: [
             "Describable": MacroSpec(type: DescribableMacro.self, conformances: conformances),
+            "DescribableProperties": MacroSpec(type: DescribablePropertiesMacro.self),
             "Description": MacroSpec(type: DescriptionMacro.self),
         ],
         applyFixIts: applyFixIts,

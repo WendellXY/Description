@@ -27,10 +27,13 @@ enum DescriptionDiagnostic: DiagnosticMessage {
     case invalidRawExpression(String)
     case rawPositionalLiteral(String)
     case invalidDefaultSource
+    case customTargetsRequireProperties(names: [String])
+    case propertiesRequireDescribable
+    case propertiesWithoutCustomTargets
 
     var severity: DiagnosticSeverity {
         switch self {
-        case .descriptionWithoutDescribable, .rawPositionalLiteral: .warning
+        case .descriptionWithoutDescribable, .rawPositionalLiteral, .propertiesWithoutCustomTargets: .warning
         default: .error
         }
     }
@@ -85,6 +88,12 @@ enum DescriptionDiagnostic: DiagnosticMessage {
             "@Description has no effect unless the type is annotated with @Describable"
         case let .invalidRawExpression(source):
             "'{\(source)}' is not a valid Swift expression"
+        case let .customTargetsRequireProperties(names):
+            "custom description \(names.count == 1 ? "property" : "properties") \(names.map { "'\($0)'" }.joined(separator: ", ")) \(names.count == 1 ? "requires" : "require") @DescribableProperties"
+        case .propertiesRequireDescribable:
+            "@DescribableProperties requires @Describable on the same type"
+        case .propertiesWithoutCustomTargets:
+            "@DescribableProperties has no effect without custom description properties such as @Description(\"name\", ...)"
         case .invalidDefaultSource:
             "default must be .caseName, .rawValue, or .member(\"name\")"
         case let .rawPositionalLiteral(digits):
@@ -121,6 +130,9 @@ enum DescriptionDiagnostic: DiagnosticMessage {
         case .invalidRawExpression: "invalidRawExpression"
         case .rawPositionalLiteral: "rawPositionalLiteral"
         case .invalidDefaultSource: "invalidDefaultSource"
+        case .customTargetsRequireProperties: "customTargetsRequireProperties"
+        case .propertiesRequireDescribable: "propertiesRequireDescribable"
+        case .propertiesWithoutCustomTargets: "propertiesWithoutCustomTargets"
         }
     }
 

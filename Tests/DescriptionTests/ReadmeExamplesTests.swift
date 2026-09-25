@@ -111,6 +111,7 @@ protocol ReadmeAnalyticsNaming {
 }
 
 @Describable
+@DescribableProperties
 enum ReadmeScreen: ReadmeAnalyticsNaming {
     @Description("analyticsName", "chat_room")
     case chat(roomId: Int)

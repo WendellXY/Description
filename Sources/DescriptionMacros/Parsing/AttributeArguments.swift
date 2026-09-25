@@ -5,6 +5,7 @@ import SwiftSyntax
 enum AttributeArguments {
     static let descriptionAttribute = "Description"
     static let describableAttribute = "Describable"
+    static let propertiesAttribute = "DescribableProperties"
 
     /// The `@Description` attributes in `attributes`, one per target; later
     /// duplicates are reported.

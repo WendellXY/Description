@@ -23,7 +23,7 @@ enum NominalExpansion {
             )
         }
         let modifiers = DescriptionGenerator.modifiers(for: model)
-        let members = targets.map { target -> String in
+        let members = targets.map { target -> (DescriptionTarget, String) in
             let body = if target != .description, let own = texts[target] {
                 own.stringLiteral
             } else if target != .description, targets.contains(.description) {
@@ -31,7 +31,7 @@ enum NominalExpansion {
             } else {
                 mainText?.stringLiteral ?? "\"\""
             }
-            return DescriptionGenerator.property(for: target, modifiers: modifiers, body: body)
+            return (target, DescriptionGenerator.property(for: target, modifiers: modifiers, body: body))
         }
         return GeneratedMembers(targets: targets, members: members)
     }

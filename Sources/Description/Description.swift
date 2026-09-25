@@ -17,7 +17,7 @@ import Foundation
 /// By default the macro generates `CustomStringConvertible`, and additionally
 /// `LocalizedError` when the declaration lists `Error` in its inheritance
 /// clause. Every target that has a `@Description` is generated too, such as
-/// `.debug` or a custom property.
+/// `.debug`. Custom properties additionally need ``DescribableProperties()``.
 ///
 /// - Parameters:
 ///   - generating: The targets to generate instead of the defaults, e.g.
@@ -29,13 +29,33 @@ import Foundation
 @attached(
     extension,
     conformances: CustomStringConvertible, CustomDebugStringConvertible, LocalizedError,
-    names: named(description), named(debugDescription), named(errorDescription), arbitrary
+    names: named(description), named(debugDescription), named(errorDescription)
 )
 @attached(peer)
 public macro Describable(
     generating: Set<DescriptionTarget> = [],
     default: DescriptionSource = .caseName
 ) = #externalMacro(module: "DescriptionMacros", type: "DescribableMacro")
+
+/// Generates the custom properties configured with `@Description("name", ...)`
+/// on a `@Describable` type:
+///
+/// ```swift
+/// @Describable
+/// @DescribableProperties
+/// enum Screen: AnalyticsNaming {
+///     @Description("analyticsName", "chat_room")
+///     case chat(roomId: Int)
+/// }
+/// ```
+///
+/// Custom properties need their own macro because introducing members with
+/// names chosen by the user requires `names: arbitrary`. Declaring arbitrary
+/// names on `@Describable` itself would trigger a compiler bug on types whose
+/// `Equatable` conformance cannot be synthesized, such as enums with closure
+/// payloads and a hand-written `==`.
+@attached(extension, names: arbitrary)
+public macro DescribableProperties() = #externalMacro(module: "DescriptionMacros", type: "DescribablePropertiesMacro")
 
 /// The main text of a type or enum case: `description`, and the fallback for
 /// every other target without its own text.
@@ -96,7 +116,8 @@ public macro Description(
 ///
 /// Use a string literal, or ``property(_:)``, to generate a property of your
 /// own, for example one required by your own protocol. Declare that protocol
-/// on the type yourself; the macro supplies the property.
+/// on the type yourself and add ``DescribableProperties()``, which supplies
+/// the property.
 public struct DescriptionTarget: Hashable, Sendable, ExpressibleByStringLiteral {
     /// The property's name.
     public let name: String

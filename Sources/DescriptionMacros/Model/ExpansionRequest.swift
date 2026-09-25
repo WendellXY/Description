@@ -17,9 +17,19 @@ struct ExpansionRequest {
     let defaultSource: DefaultSource
 }
 
-/// The members generated for one `@Describable` use, and the targets they
-/// implement.
+/// The members generated for one `@Describable` use, one per target.
 struct GeneratedMembers {
     let targets: [DescriptionTarget]
-    let members: [String]
+    let members: [(target: DescriptionTarget, code: String)]
+
+    func members(where isIncluded: (DescriptionTarget) -> Bool) -> [String] {
+        members.filter { isIncluded($0.target) }.map(\.code)
+    }
+}
+
+extension DescriptionTarget {
+    /// Whether `@DescribableProperties` generates this target.
+    var isCustomProperty: Bool {
+        if case .property = self { true } else { false }
+    }
 }
