@@ -69,8 +69,16 @@ struct ErrorDescriptionTests {
     @Test func errorDescriptionDefaultsToDescription() {
         #expect(PlainError(code: 1).errorDescription == "PlainError(code: 1)")
         #expect(PlainError(code: 1).localizedDescription == "PlainError(code: 1)")
+        #expect(ValidationError(field: "email").errorDescription == "ValidationError(field: email)")
+    }
+
+    // Foundation on Linux before Swift 6.2 crashes in `localizedDescription`
+    // for every class-based error, with or without @Describable.
+    #if !os(Linux) || compiler(>=6.2)
+    @Test func classErrorLocalizedDescription() {
         #expect(ValidationError(field: "email").localizedDescription == "ValidationError(field: email)")
     }
+    #endif
 
     @Test func thrownErrorsBridgeLocalizedDescription() {
         func fail() throws { throw HTTPStatusError.invalidStatus(code: 404) }

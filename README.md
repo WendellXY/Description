@@ -241,6 +241,10 @@ which keeps it predictable but has consequences:
   generated `description` can't override the inherited one.
 - **Templates must be single-line string literals** (raw strings are fine).
 - **Extension macros can't be attached to types declared inside functions.**
+- **Class-based errors on Linux before Swift 6.2:** Foundation crashes when
+  `localizedDescription` is called on any class that conforms to `Error`, with or
+  without `@Describable`. Read `errorDescription` directly, or use a struct or enum
+  error.
 
 ## License
 
