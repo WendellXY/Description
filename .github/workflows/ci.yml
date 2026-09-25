@@ -1,0 +1,58 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+    tags: ["*"]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  macos:
+    name: macOS
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Show toolchain
+        run: swift --version
+
+      - uses: actions/cache@v4
+        with:
+          path: .build
+          key: macos-${{ hashFiles('Package.resolved') }}-${{ hashFiles('Package.swift') }}
+          restore-keys: macos-${{ hashFiles('Package.resolved') }}-
+
+      - name: Test
+        run: swift test
+
+  linux:
+    name: Linux (Swift ${{ matrix.swift }})
+    runs-on: ubuntu-latest
+    container: swift:${{ matrix.swift }}
+    strategy:
+      fail-fast: false
+      matrix:
+        # 6.0 is the oldest compiler the package supports.
+        swift: ["6.0", "6.1", "6.2"]
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Show toolchain
+        run: swift --version
+
+      - uses: actions/cache@v4
+        with:
+          path: .build
+          key: linux-${{ matrix.swift }}-${{ hashFiles('Package.resolved') }}-${{ hashFiles('Package.swift') }}
+          restore-keys: linux-${{ matrix.swift }}-${{ hashFiles('Package.resolved') }}-
+
+      - name: Test
+        run: swift test

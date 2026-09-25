@@ -1,5 +1,7 @@
 # Description
 
+[![CI](https://github.com/WendellXY/Description/actions/workflows/ci.yml/badge.svg)](https://github.com/WendellXY/Description/actions/workflows/ci.yml)
+
 Compile-time-validated descriptions for Swift enums, structs, classes, and actors.
 
 ```swift
