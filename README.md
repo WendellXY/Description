@@ -1,6 +1,8 @@
 # Description
 
 [![CI](https://github.com/WendellXY/Description/actions/workflows/ci.yml/badge.svg)](https://github.com/WendellXY/Description/actions/workflows/ci.yml)
+[![Swift versions](https://img.shields.io/endpoint?url=https%3A%2F%2Fswiftpackageindex.com%2Fapi%2Fpackages%2FWendellXY%2FDescription%2Fbadge%3Ftype%3Dswift-versions)](https://swiftpackageindex.com/WendellXY/Description)
+[![Platforms](https://img.shields.io/endpoint?url=https%3A%2F%2Fswiftpackageindex.com%2Fapi%2Fpackages%2FWendellXY%2FDescription%2Fbadge%3Ftype%3Dplatforms)](https://swiftpackageindex.com/WendellXY/Description)
 
 Compile-time-validated descriptions for Swift enums, structs, classes, and actors.
 
